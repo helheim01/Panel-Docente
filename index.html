@@ -1,0 +1,2141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GestorDocente</title>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, doc, setDoc, getDoc }
+    from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getAuth, signInWithEmailAndPassword, signOut }
+    from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey:            "TU_API_KEY",
+    authDomain:        "TU_PROJECT.firebaseapp.com",
+    projectId:         "TU_PROJECT_ID",
+    storageBucket:     "TU_PROJECT.appspot.com",
+    messagingSenderId: "TU_SENDER_ID",
+    appId:             "TU_APP_ID"
+  };
+  const DEMO_MODE = firebaseConfig.apiKey === "TU_API_KEY";
+  window.DEMO_MODE = DEMO_MODE;
+  if (!DEMO_MODE) {
+    const app = initializeApp(firebaseConfig);
+    window._fb = { db: getFirestore(app), auth: getAuth(app), doc, setDoc, getDoc, signInWithEmailAndPassword, signOut };
+  }
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<style>
+:root {
+  --bg:    #0d1018;
+  --surf:  #141720;
+  --surf2: #1b1f2e;
+  --surf3: #222738;
+  --bord:  #272d42;
+  --acc:   #4f8ef7;
+  --acc2:  #f7c14f;
+  --grn:   #3ecf8e;
+  --red:   #f76f6f;
+  --text:  #e4e9f4;
+  --mut:   #6b7599;
+  --fh:    'Syne', sans-serif;
+  --fb:    'Instrument Sans', sans-serif;
+  --r:     10px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body { font-family: var(--fb); background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+button { cursor: pointer; font-family: inherit; }
+input, select, textarea { font-family: inherit; }
+
+.topbar {
+  height: 56px; display: flex; align-items: center;
+  justify-content: space-between; padding: 0 24px;
+  background: var(--surf); border-bottom: 1px solid var(--bord);
+  position: sticky; top: 0; z-index: 100;
+}
+.brand { font-family: var(--fh); font-size: 1.15rem; font-weight: 800; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.brand em { color: var(--acc); font-style: normal; }
+.topbar-r { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.user-pill {
+  font-size: .78rem; color: var(--mut);
+  background: var(--surf2); border: 1px solid var(--bord);
+  border-radius: 99px; padding: 5px 13px;
+  display: flex; align-items: center; gap: 6px;
+}
+.user-pill strong { color: var(--text); }
+.btn-sm {
+  padding: 6px 14px; border-radius: 8px; font-size: .78rem; font-weight: 600;
+  border: 1px solid var(--bord); background: var(--surf2); color: var(--mut);
+  transition: all .18s;
+}
+.btn-sm:hover { border-color: var(--red); color: var(--red); }
+.demo-bar {
+  background: rgba(247,193,79,.07); border-bottom: 1px solid rgba(247,193,79,.18);
+  padding: 7px 24px; font-size: .75rem; color: var(--acc2);
+  display: none; align-items: center; gap: 8px;
+}
+
+#app { display: none; flex-direction: column; min-height: 100vh; }
+.main { display: flex; flex: 1; }
+
+.sidebar {
+  width: 276px; min-width: 276px;
+  background: var(--surf); border-right: 1px solid var(--bord);
+  padding: 22px 18px; display: flex; flex-direction: column; gap: 16px;
+  position: sticky; top: 56px; height: calc(100vh - 56px); overflow-y: auto;
+}
+.sb-lbl { font-size: .67rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--mut); }
+.fb { display: flex; flex-direction: column; gap: 7px; }
+.fl { font-size: .76rem; font-weight: 600; color: var(--mut); display: flex; align-items: center; gap: 6px; }
+.step {
+  width: 17px; height: 17px; border-radius: 50%; background: var(--bord);
+  font-size: .65rem; font-weight: 700; display: inline-flex; align-items: center;
+  justify-content: center; color: var(--mut); flex-shrink: 0;
+}
+.step.on { background: var(--acc); color: #fff; }
+select.ss {
+  width: 100%; background: var(--surf2); border: 1px solid var(--bord);
+  color: var(--text); padding: 9px 32px 9px 12px; border-radius: var(--r);
+  font-size: .84rem; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' fill='none'%3E%3Cpath d='M1 1l4.5 4.5L10 1' stroke='%236b7599' stroke-width='1.4' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+  transition: border-color .18s; cursor: pointer;
+}
+select.ss:focus { outline: none; border-color: var(--acc); box-shadow: 0 0 0 3px rgba(79,142,247,.12); }
+select.ss:disabled { opacity: .38; cursor: not-allowed; }
+select.ss option { background: var(--surf2); }
+.hr { border: none; border-top: 1px solid var(--bord); }
+.btn-viz {
+  margin-top: auto; padding: 12px; border: none;
+  background: var(--acc); color: #fff; border-radius: var(--r);
+  font-family: var(--fh); font-size: .9rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: all .2s; box-shadow: 0 4px 16px rgba(79,142,247,.22);
+}
+.btn-viz:hover:not(:disabled) { background: #3a7be8; transform: translateY(-1px); }
+.btn-viz:disabled { opacity: .38; cursor: not-allowed; }
+
+.content { flex: 1; padding: 28px 32px; overflow-y: auto; }
+
+#sc-welcome {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; min-height: 400px; gap: 14px; text-align: center;
+}
+.w-icon {
+  width: 64px; height: 64px; border-radius: 16px;
+  background: rgba(79,142,247,.1); border: 1px solid rgba(79,142,247,.25);
+  display: flex; align-items: center; justify-content: center;
+}
+#sc-welcome h2 { font-family: var(--fh); font-size: 1.4rem; font-weight: 800; }
+#sc-welcome p { color: var(--mut); font-size: .87rem; max-width: 320px; line-height: 1.65; }
+
+.pg-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 16px; margin-bottom: 22px; flex-wrap: wrap;
+}
+.pg-title { font-family: var(--fh); font-size: 1.35rem; font-weight: 800; }
+.chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 7px; }
+.chip {
+  font-size: .72rem; padding: 3px 10px; border-radius: 99px;
+  background: var(--surf2); border: 1px solid var(--bord); color: var(--mut);
+}
+.chip strong { color: var(--text); }
+.btn-pri {
+  padding: 10px 18px; border: none; background: var(--grn); color: #0d1018;
+  border-radius: var(--r); font-family: var(--fh); font-size: .85rem; font-weight: 700;
+  display: flex; align-items: center; gap: 7px;
+  transition: all .18s; white-space: nowrap; flex-shrink: 0;
+}
+.btn-pri:hover { background: #33c07e; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(62,207,142,.28); }
+
+#sc-acts { display: none; }
+.act-wrap { background: var(--surf); border: 1px solid var(--bord); border-radius: var(--r); overflow: hidden; }
+.act-empty { padding: 52px 20px; text-align: center; color: var(--mut); font-size: .88rem; }
+.act-empty strong { display: block; color: var(--text); font-family: var(--fh); font-size: 1rem; margin-bottom: 5px; }
+
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  background: var(--surf2); padding: 10px 16px; text-align: left;
+  font-family: var(--fh); font-size: .67rem; font-weight: 700;
+  letter-spacing: .09em; text-transform: uppercase; color: var(--mut);
+  border-bottom: 1px solid var(--bord);
+}
+tbody tr { border-bottom: 1px solid var(--bord); transition: background .12s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: rgba(255,255,255,.016); }
+tbody td { padding: 12px 16px; font-size: .855rem; vertical-align: middle; }
+
+.a-name-cell { display: flex; align-items: center; gap: 10px; }
+.a-icon {
+  width: 34px; height: 34px; border-radius: 8px; flex-shrink: 0;
+  background: rgba(79,142,247,.1); border: 1px solid rgba(79,142,247,.2);
+  display: flex; align-items: center; justify-content: center; font-size: .85rem;
+}
+.a-name { font-weight: 600; }
+
+.prog-wrap { display: flex; align-items: center; gap: 9px; }
+.prog-bg { height: 5px; border-radius: 99px; background: var(--surf3); flex: 1; min-width: 60px; overflow: hidden; }
+.prog-fill { height: 100%; background: var(--acc); border-radius: 99px; transition: width .3s; }
+.prog-lbl { font-size: .77rem; color: var(--mut); white-space: nowrap; }
+
+.btn-row { display: flex; gap: 6px; }
+.btn-icon {
+  width: 30px; height: 30px; border-radius: 7px;
+  border: 1px solid var(--bord); background: var(--surf2);
+  color: var(--mut); display: inline-flex; align-items: center; justify-content: center;
+  transition: all .15s; padding: 0;
+}
+.btn-icon:hover { border-color: var(--acc); color: var(--acc); background: rgba(79,142,247,.08); }
+.btn-icon.del:hover { border-color: var(--red); color: var(--red); background: rgba(247,111,111,.08); }
+.btn-open {
+  padding: 7px 14px; border-radius: 8px;
+  border: 1px solid rgba(79,142,247,.35); background: rgba(79,142,247,.08);
+  color: var(--acc); font-size: .8rem; font-weight: 600;
+  display: flex; align-items: center; gap: 6px; transition: all .15s;
+}
+.btn-open:hover { background: rgba(79,142,247,.18); border-color: var(--acc); }
+
+#sc-det { display: none; }
+.back-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: .82rem; font-weight: 600; color: var(--mut);
+  padding: 7px 14px; border-radius: 8px;
+  border: 1px solid var(--bord); background: var(--surf2);
+  margin-bottom: 20px; transition: all .15s;
+}
+.back-btn:hover { color: var(--text); border-color: rgba(255,255,255,.12); }
+
+.det-head {
+  background: var(--surf); border: 1px solid var(--bord);
+  border-radius: var(--r); padding: 18px 22px; margin-bottom: 20px;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+}
+.det-left { display: flex; align-items: flex-start; gap: 14px; }
+.det-big-icon {
+  width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0;
+  background: rgba(79,142,247,.12); border: 1px solid rgba(79,142,247,.25);
+  display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+}
+.det-act-name { font-family: var(--fh); font-size: 1.1rem; font-weight: 800; }
+.det-act-meta { font-size: .78rem; color: var(--mut); margin-top: 4px; display: flex; gap: 12px; flex-wrap: wrap; }
+
+.stats-mini { display: flex; gap: 10px; flex-wrap: wrap; }
+.sm {
+  padding: 8px 14px; border-radius: 8px;
+  background: var(--surf2); border: 1px solid var(--bord); text-align: center;
+}
+.sm-val { font-family: var(--fh); font-size: 1.1rem; font-weight: 800; line-height: 1; }
+.sm-lbl { font-size: .67rem; color: var(--mut); margin-top: 2px; }
+
+.det-tbl-wrap { background: var(--surf); border: 1px solid var(--bord); border-radius: var(--r); overflow: hidden; }
+.det-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; border-bottom: 1px solid var(--bord); gap: 10px; flex-wrap: wrap;
+}
+.srch {
+  display: flex; align-items: center; gap: 7px;
+  background: var(--surf2); border: 1px solid var(--bord);
+  border-radius: 8px; padding: 6px 12px; transition: border-color .15s;
+}
+.srch:focus-within { border-color: var(--acc); }
+.srch input { background: none; border: none; outline: none; color: var(--text); font-size: .83rem; width: 170px; }
+.srch input::placeholder { color: var(--mut); }
+.tbl-ct { font-size: .77rem; color: var(--mut); }
+
+.s-name-cell { display: flex; align-items: center; gap: 9px; font-weight: 600; }
+.av {
+  width: 28px; height: 28px; border-radius: 7px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .64rem; font-weight: 700;
+}
+
+.nota-disp {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 38px; height: 26px; border-radius: 6px; padding: 0 8px;
+  font-size: .82rem; font-weight: 700; cursor: pointer;
+  background: var(--surf2); border: 1px dashed var(--bord); color: var(--mut);
+  transition: all .15s; white-space: nowrap;
+}
+.nota-disp:hover { border-color: var(--acc); color: var(--acc); border-style: solid; }
+.nota-disp.h { background: rgba(62,207,142,.12); border: 1px solid rgba(62,207,142,.4); color: var(--grn); }
+.nota-disp.m { background: rgba(247,193,79,.1); border: 1px solid rgba(247,193,79,.35); color: var(--acc2); }
+.nota-disp.l { background: rgba(247,111,111,.1); border: 1px solid rgba(247,111,111,.35); color: var(--red); }
+
+.nota-inp-wrap { display: none; }
+.nota-inp-wrap input {
+  width: 66px; background: var(--surf2); border: 1px solid var(--acc);
+  border-radius: 6px; color: var(--text); padding: 4px 8px;
+  font-size: .83rem; text-align: center;
+}
+.nota-inp-wrap input:focus { outline: none; box-shadow: 0 0 0 3px rgba(79,142,247,.12); }
+
+.att-sel { display: flex; gap: 4px; }
+.att-b {
+  width: 30px; height: 26px; border-radius: 6px;
+  border: 1px solid var(--bord); background: var(--surf2);
+  font-size: .72rem; font-weight: 700; color: var(--mut);
+  transition: all .12s; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.att-b.sp { background: rgba(62,207,142,.15); border-color: rgba(62,207,142,.5); color: var(--grn); }
+.att-b.sa { background: rgba(247,111,111,.15); border-color: rgba(247,111,111,.5); color: var(--red); }
+.att-b.st { background: rgba(247,193,79,.12); border-color: rgba(247,193,79,.45); color: var(--acc2); }
+
+.obs-inp {
+  background: none; border: none; border-bottom: 1px dashed var(--bord);
+  color: var(--text); font-size: .82rem; width: 100%; min-width: 110px;
+  padding: 2px 0; transition: border-color .15s;
+}
+.obs-inp:focus { outline: none; border-color: var(--acc); }
+#alumnos-editor:focus { outline: none; border-color: var(--acc); box-shadow: 0 0 0 3px rgba(79,142,247,.1); }
+.obs-inp::placeholder { color: var(--mut); }
+
+.btn-save-row {
+  padding: 5px 12px; border-radius: 6px; border: none;
+  background: var(--acc); color: #fff; font-size: .78rem; font-weight: 700;
+  white-space: nowrap; transition: all .15s;
+}
+.btn-save-row:hover { background: #3a7be8; }
+
+.overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.55);
+  backdrop-filter: blur(8px); z-index: 200;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.overlay.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--surf); border: 1px solid var(--bord);
+  border-radius: 16px; padding: 28px 28px 24px; width: 100%; max-width: 430px;
+  box-shadow: 0 24px 60px rgba(0,0,0,.5);
+  transform: translateY(18px); transition: transform .22s ease;
+}
+.overlay.open .modal { transform: translateY(0); }
+.mod-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+.mod-head h3 { font-family: var(--fh); font-size: 1.05rem; font-weight: 800; }
+.x-btn {
+  width: 30px; height: 30px; border-radius: 7px;
+  border: 1px solid var(--bord); background: var(--surf2); color: var(--mut);
+  display: flex; align-items: center; justify-content: center; font-size: 1rem;
+  transition: all .15s;
+}
+.x-btn:hover { color: var(--red); border-color: var(--red); }
+.form { display: flex; flex-direction: column; gap: 14px; }
+.fg { display: flex; flex-direction: column; gap: 5px; }
+.fg label { font-size: .76rem; font-weight: 600; color: var(--mut); }
+.fi {
+  background: var(--surf2); border: 1px solid var(--bord);
+  border-radius: 9px; color: var(--text); padding: 9px 13px; font-size: .88rem; width: 100%;
+  transition: border-color .18s;
+}
+.fi:focus { outline: none; border-color: var(--acc); box-shadow: 0 0 0 3px rgba(79,142,247,.1); }
+.frow { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.mod-foot { display: flex; gap: 10px; margin-top: 8px; }
+.btn-cx {
+  flex: 1; padding: 10px; background: var(--surf2);
+  border: 1px solid var(--bord); color: var(--mut); border-radius: 9px;
+  font-size: .85rem; font-weight: 600; transition: all .18s;
+}
+.btn-cx:hover { border-color: var(--red); color: var(--red); }
+.btn-ok {
+  flex: 2; padding: 10px; background: var(--acc); border: none;
+  color: #fff; border-radius: 9px; font-family: var(--fh);
+  font-size: .88rem; font-weight: 700; transition: all .18s;
+  box-shadow: 0 4px 14px rgba(79,142,247,.22);
+}
+.btn-ok:hover { background: #3a7be8; }
+
+#login-screen {
+  position: fixed; inset: 0; background: var(--bg);
+  display: flex; align-items: center; justify-content: center; z-index: 300;
+}
+.login-card {
+  background: var(--surf); border: 1px solid var(--bord);
+  border-radius: 18px; padding: 36px 32px; width: 100%; max-width: 354px;
+  box-shadow: 0 20px 50px rgba(0,0,0,.4);
+}
+.login-logo { font-family: var(--fh); font-size: 1.35rem; font-weight: 800; margin-bottom: 4px; }
+.login-logo em { color: var(--acc); font-style: normal; }
+.login-sub { font-size: .82rem; color: var(--mut); margin-bottom: 24px; }
+.lf { display: flex; flex-direction: column; gap: 12px; }
+.btn-login {
+  padding: 11px; background: var(--acc); border: none; color: #fff;
+  border-radius: 9px; font-family: var(--fh); font-size: .92rem; font-weight: 700;
+  transition: all .18s; box-shadow: 0 4px 16px rgba(79,142,247,.28); margin-top: 4px;
+}
+.btn-login:hover { background: #3a7be8; }
+.demo-notice {
+  font-size: .72rem; color: var(--mut); text-align: center; margin-top: 12px;
+  background: var(--surf2); border: 1px solid var(--bord);
+  border-radius: 8px; padding: 9px; line-height: 1.5;
+}
+.demo-notice strong { color: var(--acc2); }
+
+.toasts { position: fixed; top: 66px; right: 16px; z-index: 500; display: flex; flex-direction: column; gap: 7px; }
+.toast {
+  background: var(--surf); border: 1px solid var(--bord); border-radius: 9px;
+  padding: 10px 16px; font-size: .83rem; display: flex; align-items: center; gap: 9px;
+  box-shadow: 0 4px 18px rgba(0,0,0,.3); transform: translateX(110%);
+  transition: transform .28s ease; max-width: 300px;
+}
+.toast.show { transform: translateX(0); }
+.toast.ok  { border-left: 3px solid var(--grn); }
+.toast.err { border-left: 3px solid var(--red); }
+.toast.inf { border-left: 3px solid var(--acc); }
+
+.btn-alum {
+  padding: 11px; border: 1px solid rgba(167,139,250,.35);
+  background: rgba(167,139,250,.08); color: #a78bfa;
+  border-radius: var(--r); font-family: var(--fh); font-size: .88rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: all .2s;
+}
+.btn-alum:hover:not(:disabled) { background: rgba(167,139,250,.18); border-color: #a78bfa; transform: translateY(-1px); }
+.btn-alum:disabled { opacity: .38; cursor: not-allowed; }
+
+#sc-alumnos { display: none; }
+
+.sort-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.sort-tab {
+  padding: 6px 13px; border-radius: 8px; font-size: .78rem; font-weight: 600;
+  border: 1px solid var(--bord); background: var(--surf2); color: var(--mut);
+  transition: all .15s; cursor: pointer;
+}
+.sort-tab.active { border-color: rgba(167,139,250,.5); background: rgba(167,139,250,.1); color: #a78bfa; }
+
+.stu-list-wrap {
+  background: var(--surf); border: 1px solid var(--bord); border-radius: var(--r); overflow: hidden;
+}
+.stu-list-wrap table { width: 100%; border-collapse: collapse; }
+.stu-list-wrap thead th {
+  background: var(--surf2); padding: 10px 16px; text-align: left;
+  font-family: var(--fh); font-size: .67rem; font-weight: 700;
+  letter-spacing: .09em; text-transform: uppercase; color: var(--mut);
+  border-bottom: 1px solid var(--bord); white-space: nowrap;
+}
+.stu-list-wrap tbody tr {
+  border-bottom: 1px solid var(--bord); cursor: pointer; transition: background .12s;
+}
+.stu-list-wrap tbody tr:last-child { border-bottom: none; }
+.stu-list-wrap tbody tr:hover { background: rgba(167,139,250,.05); }
+.stu-list-wrap tbody td { padding: 10px 16px; font-size: .855rem; vertical-align: middle; }
+
+.stu-av-sm {
+  width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .66rem; font-weight: 700;
+}
+.stu-name-cell { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+
+.dots-strip { display: flex; gap: 3px; align-items: center; flex-wrap: nowrap; }
+.s-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  transition: transform .1s;
+}
+.dots-strip:hover .s-dot { transform: scale(1.3); }
+
+#sc-alumno { display: none; }
+
+.stu-profile-head {
+  background: var(--surf); border: 1px solid var(--bord); border-radius: var(--r);
+  padding: 22px 24px; margin-bottom: 20px;
+  display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+}
+.stu-profile-av {
+  width: 56px; height: 56px; border-radius: 14px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; font-weight: 800;
+}
+.stu-profile-info { flex: 1; min-width: 160px; }
+.stu-profile-name { font-family: var(--fh); font-size: 1.3rem; font-weight: 800; }
+.stu-profile-meta { font-size: .78rem; color: var(--mut); margin-top: 4px; }
+.stu-profile-stats { display: flex; gap: 10px; flex-wrap: wrap; margin-left: auto; }
+
+.stu-hist-wrap {
+  background: var(--surf); border: 1px solid var(--bord); border-radius: var(--r); overflow: hidden;
+}
+.stu-hist-empty {
+  padding: 44px 20px; text-align: center; color: var(--mut); font-size: .88rem;
+}
+.stu-hist-empty strong { display: block; color: var(--text); font-family: var(--fh); font-size: 1rem; margin-bottom: 5px; }
+
+.grade-timeline {
+  display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+  padding: 14px 18px; border-bottom: 1px solid var(--bord);
+  background: var(--surf2);
+}
+.gt-dot { display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: default; }
+.gt-dot-circle {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .72rem; font-weight: 800; border: 2px solid transparent;
+}
+.gt-dot-lbl { font-size: .6rem; color: var(--mut); max-width: 40px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.att-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 2px 10px; border-radius: 99px; font-size: .75rem; font-weight: 700;
+}
+.att-badge.p { background: rgba(62,207,142,.12); color: var(--grn); }
+.att-badge.a { background: rgba(247,111,111,.12); color: var(--red); }
+.att-badge.t { background: rgba(247,193,79,.10); color: var(--acc2); }
+.att-badge.n { background: var(--surf2); color: var(--mut); }
+
+@keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+/* ── MOBILE: sidebar se oculta, toggle button aparece ── */
+@media (max-width: 860px) {
+  .main { flex-direction: column; position: relative; }
+
+  /* Sidebar oculto por defecto en mobile */
+  .sidebar {
+    display: none;
+    width: 100%; min-width: unset; height: auto;
+    position: static; border-right: none;
+    border-bottom: 1px solid var(--bord);
+    padding: 12px 14px; gap: 10px;
+  }
+  .sidebar.open { display: flex; }
+
+  .content { padding: 14px 12px; }
+
+  /* Topbar compacto */
+  .topbar { padding: 0 12px; height: 48px; }
+  .brand { font-size: .95rem; }
+  .user-pill { display: none; }
+  .btn-sm { padding: 5px 10px; font-size: .72rem; }
+
+  /* Demo bar */
+  .demo-bar { padding: 5px 12px; font-size: .7rem; }
+
+  /* Page headers */
+  .pg-header { gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .pg-title { font-size: 1rem; }
+  .chips { gap: 4px; }
+  .chip { font-size: .66rem; padding: 2px 7px; }
+  .btn-pri { padding: 7px 11px; font-size: .76rem; }
+
+  /* Tables scroll */
+  .stu-list-wrap, .det-tbl-wrap, .act-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .stu-list-wrap table { min-width: 580px; }
+  .det-tbl-wrap table { min-width: 500px; }
+
+  /* Stats */
+  .stats-mini { gap: 5px; flex-wrap: wrap; }
+  .sm { padding: 6px 10px; }
+  .sm-val { font-size: .9rem; }
+
+  /* Student profile */
+  .stu-profile-head { padding: 12px; gap: 10px; flex-wrap: wrap; }
+  .stu-profile-av { width: 40px; height: 40px; font-size: .85rem; }
+  .stu-profile-name { font-size: 1rem; }
+  .stu-profile-stats { margin-left: 0; width: 100%; }
+
+  /* Search + edit button */
+  .pg-header > div:last-child { width: 100%; flex-wrap: wrap; }
+  .srch { flex: 1; min-width: 0; }
+  .srch input { width: 100%; min-width: 0; }
+
+  /* Sort tabs */
+  .sort-tabs { gap: 4px; }
+  .sort-tab { padding: 5px 9px; font-size: .7rem; }
+
+  /* Modal full-screen on mobile */
+  .overlay { padding: 10px; align-items: flex-end; }
+  .modal { border-radius: 16px 16px 10px 10px; padding: 18px 14px 14px; max-height: 90vh; overflow-y: auto; }
+
+  /* Detail head */
+  .det-head { padding: 10px 12px; }
+  .det-act-name { font-size: .9rem; }
+  .back-btn { font-size: .74rem; padding: 5px 10px; margin-bottom: 10px; }
+
+  /* Auto-fill displays */
+  #esp-display, #hor-display { font-size: .8rem; padding: 7px 10px; min-height: 34px; }
+  #doc-wrap > div, #doc-wrap select { font-size: .8rem !important; padding: 7px 10px !important; }
+  .btn-viz, .btn-alum { padding: 10px; font-size: .82rem; margin-top: 0; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">Gestor<em>Docente</em></div>
+    <p class="login-sub">Panel de gestión académica</p>
+    <div class="lf">
+      <div class="fg"><label>Correo electrónico</label><input id="li-email" type="email" class="fi" placeholder="docente@colegio.edu.ar" /></div>
+      <div class="fg"><label>Contraseña</label><input id="li-pass" type="password" class="fi" placeholder="••••••••" /></div>
+      <button class="btn-login" onclick="doLogin()">Ingresar</button>
+    </div>
+    <div class="demo-notice" id="demo-notice"><strong>⚡ Modo Demo activo</strong><br>Ingresá con cualquier dato. Configurá Firebase para uso real.</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <header class="topbar">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none"><rect width="26" height="26" rx="7" fill="rgba(79,142,247,.15)"/><path d="M6 19L13 7l7 12" stroke="#4f8ef7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.5 15h9" stroke="#4f8ef7" stroke-width="1.4" stroke-linecap="round"/></svg>
+      Gestor<em>Docente</em>
+    </div>
+    <div class="topbar-r">
+      <div class="user-pill">👤 <strong id="un">Docente</strong></div>
+      <button class="btn-sm" id="btn-toggle-sidebar" onclick="toggleSidebar()" style="display:none;">
+        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        Volver
+      </button>
+      <button class="btn-sm" id="btn-global-back" onclick="goBackGlobal()" style="display:none;">
+        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        Volver
+      </button>
+      <button class="btn-sm" onclick="doLogout()">Salir</button>
+    </div>
+  </header>
+  <div class="demo-bar" id="demo-bar">⚡ <strong>Modo Demo</strong> — Datos guardados localmente en el navegador.</div>
+
+  <div class="main">
+    <aside class="sidebar">
+      <div class="sb-lbl">Filtros</div>
+      <div class="fb">
+        <div class="fl"><span class="step on" id="b1">1</span> Curso</div>
+        <select class="ss" id="s-curso" onchange="onCurso()">
+          <option value="">— Seleccioná —</option>
+          <option>1° 3°</option>
+          <option>1° 4°</option>
+          <option>2° 1°</option>
+          <option>3° 1°</option>
+          <option>4° 1°</option>
+          <option>4° 2°</option>
+          <option>4° 3°</option>
+          <option>5° 1°</option>
+          <option>5° 2°</option>
+          <option>5° 3°</option>
+          <option>6° 1°</option>
+          <option>6° 2°</option>
+          <option>6° 3°</option>
+          <option>6° 4°</option>
+        </select>
+      </div>
+
+      <div class="fb">
+        <div class="fl"><span class="step" id="b2">2</span> Turno</div>
+        <div id="hor-display" style="
+          background: var(--surf2); border: 1px solid var(--bord);
+          border-radius: var(--r); padding: 9px 13px; font-size: .84rem;
+          color: var(--mut); min-height: 38px;
+        ">— Se completa según el curso —</div>
+      </div>
+      <div class="fb">
+        <div class="fl"><span class="step" id="b3">3</span> Especialidad</div>
+        <div id="esp-display" style="
+          background: var(--surf2); border: 1px solid var(--bord);
+          border-radius: var(--r); padding: 9px 13px; font-size: .84rem;
+          color: var(--mut); min-height: 38px;
+        ">— Se completa según el curso —</div>
+      </div>
+      <div class="fb">
+        <div class="fl"><span class="step" id="b4">4</span> Rotación</div>
+        <select class="ss" id="s-rot" onchange="onRot()" disabled><option value="">— Primero seleccioná turno —</option></select>
+      </div>
+      <div class="fb">
+        <div class="fl"><span class="step" id="b5">5</span> Docente</div>
+        <div id="doc-wrap">
+          <select class="ss" id="s-doc" disabled><option>— Primero seleccioná rotación —</option></select>
+        </div>
+      </div>
+      <hr class="hr"/>
+      <button class="btn-viz" id="btn-viz" onclick="visualizar()" disabled>
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        Actividades
+      </button>
+      <button class="btn-alum" id="btn-alum" onclick="verAlumnos()" disabled>
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        Ver alumnos
+      </button>
+    </aside>
+
+    <main class="content" id="content">
+
+      <!-- WELCOME -->
+      <div id="sc-welcome" style="animation: fadeUp .5s ease forwards;">
+        <div class="w-icon">
+          <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="#4f8ef7" stroke-width="1.4"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        </div>
+        <h2>Seleccioná los filtros</h2>
+        <p>Completá los 5 pasos del panel lateral y presioná <strong>Visualizar</strong> para ver las actividades del curso.</p>
+      </div>
+
+      <!-- ACTIVITIES LIST -->
+      <div id="sc-acts">
+        <div class="pg-header">
+          <div>
+            <div class="pg-title" id="acts-title">Actividades</div>
+            <div class="chips" id="acts-chips"></div>
+          </div>
+          <button class="btn-pri" onclick="openNewAct()">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nueva actividad
+          </button>
+        </div>
+        <div class="act-wrap">
+          <div id="acts-empty" class="act-empty">
+            <strong>Sin actividades todavía</strong>
+            Creá la primera usando el botón de arriba.
+          </div>
+          <table id="acts-tbl" style="display:none">
+            <thead>
+              <tr>
+                <th>Actividad</th>
+                <th>Fecha</th>
+                <th>Observaciones</th>
+                <th>Progreso</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="acts-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- STUDENTS LIST -->
+      <div id="sc-alumnos">
+        <div class="pg-header">
+          <div>
+            <div class="pg-title" id="alum-title">Alumnos</div>
+            <div class="chips" id="alum-chips"></div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <div class="srch">
+              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="#6b7599" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              <input type="text" placeholder="Buscar alumno…" id="alum-q" oninput="renderAlumnos()" />
+            </div>
+            <button class="btn-pri" onclick="openEditAlumnos()" style="background:rgba(167,139,250,.15);color:#a78bfa;border:1px solid rgba(167,139,250,.4);">
+              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+              Editar alumnos
+            </button>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+          <div class="sort-tabs" id="sort-tabs">
+            <button class="sort-tab active" onclick="setSortAlum('nombre',this)">A–Z</button>
+            <button class="sort-tab" onclick="setSortAlum('promedio',this)">Promedio ↓</button>
+            <button class="sort-tab" onclick="setSortAlum('asistencia',this)">Asistencia ↓</button>
+            <button class="sort-tab" onclick="setSortAlum('actividades',this)">Más registros</button>
+          </div>
+          <span class="tbl-ct" id="alum-ct"></span>
+        </div>
+
+        <div class="stu-list-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Alumno/a</th>
+                <th>Rotación</th>
+                <th>Promedio</th>
+                <th>Asistencia</th>
+                <th>Presencias</th>
+                <th>Ausencias</th>
+                <th>Tardanzas</th>
+                <th>Actividades</th>
+              </tr>
+            </thead>
+            <tbody id="stu-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- STUDENT PROFILE -->
+      <div id="sc-alumno">
+        <button class="back-btn" onclick="goBackAlumnos()">
+          <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Volver a alumnos
+        </button>
+
+        <div class="stu-profile-head">
+          <div class="stu-profile-av" id="sp-av"></div>
+          <div class="stu-profile-info">
+            <div class="stu-profile-name" id="sp-name">—</div>
+            <div class="stu-profile-meta" id="sp-meta">—</div>
+          </div>
+          <div class="stu-profile-stats" id="sp-stats"></div>
+        </div>
+
+        <div class="stu-hist-wrap">
+          <div class="grade-timeline" id="sp-timeline"></div>
+          <div id="sp-empty" class="stu-hist-empty" style="display:none">
+            <strong>Sin registros todavía</strong>
+            Este alumno no tiene notas ni asistencia cargadas en ninguna actividad.
+          </div>
+          <div style="overflow-x:auto">
+            <table id="sp-tbl">
+              <thead>
+                <tr>
+                  <th>Actividad</th>
+                  <th>Fecha</th>
+                  <th>Nota</th>
+                  <th>Asistencia</th>
+                  <th>Observaciones</th>
+                </tr>
+              </thead>
+              <tbody id="sp-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACTIVITY DETAIL -->
+      <div id="sc-det">
+        <button class="back-btn" onclick="goBack()">
+          <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Volver a actividades
+        </button>
+
+        <div class="det-head">
+          <div class="det-left">
+            <div class="det-big-icon" id="d-icon">📋</div>
+            <div>
+              <div class="det-act-name" id="d-name">—</div>
+              <div class="det-act-meta">
+                <span>📅 <span id="d-fecha">—</span></span>
+                <span id="d-obs-span"></span>
+              </div>
+            </div>
+          </div>
+          <div class="stats-mini" id="d-stats"></div>
+        </div>
+
+        <div class="det-tbl-wrap">
+          <div class="det-toolbar">
+            <div class="srch">
+              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="#6b7599" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              <input type="text" placeholder="Buscar alumno…" id="det-q" oninput="renderDet()" />
+            </div>
+            <span class="tbl-ct" id="det-ct"></span>
+          </div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Alumno/a</th>
+                  <th>Nota</th>
+                  <th>Asistencia</th>
+                  <th>Observaciones</th>
+                  <th>Guardar</th>
+                </tr>
+              </thead>
+              <tbody id="det-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- MODAL: Nueva actividad -->
+<div class="overlay" id="ov-act" onclick="closeAct(event)">
+  <div class="modal">
+    <div class="mod-head">
+      <h3>Nueva actividad</h3>
+      <button class="x-btn" onclick="closeAct()">✕</button>
+    </div>
+    <div class="form">
+      <div class="fg"><label>Nombre *</label><input type="text" class="fi" id="m-nom" placeholder="Ej: Trabajo Práctico N°3, Evaluación parcial…" /></div>
+      <div class="frow">
+        <div class="fg"><label>Fecha *</label><input type="date" class="fi" id="m-fec" /></div>
+        <div class="fg">
+          <label>Ícono</label>
+          <select class="fi" id="m-ico">
+            <option value="📋">📋 General</option>
+            <option value="📝">📝 Examen</option>
+            <option value="📚">📚 TP escrito</option>
+            <option value="🔬">🔬 Laboratorio</option>
+            <option value="🗣️">🗣️ Oral</option>
+            <option value="💻">💻 Digital</option>
+            <option value="🎨">🎨 Arte / Práctica</option>
+            <option value="⚽">⚽ Deportivo</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg"><label>Observaciones adicionales</label><input type="text" class="fi" id="m-obs" placeholder="Descripción, consigna, etc. (opcional)" /></div>
+      <div class="mod-foot">
+        <button class="btn-cx" onclick="closeAct()">Cancelar</button>
+        <button class="btn-ok" onclick="createAct()">✔ Crear actividad</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<!-- MODAL: Editar alumnos del curso -->
+<div class="overlay" id="ov-alumnos" onclick="closeEditAlumnos(event)">
+  <div class="modal" style="max-width:520px;max-height:80vh;display:flex;flex-direction:column;">
+    <div class="mod-head">
+      <h3 id="ov-alumnos-title">Editar alumnos</h3>
+      <button class="x-btn" onclick="closeEditAlumnos()">✕</button>
+    </div>
+    <p style="font-size:.78rem;color:var(--mut);margin-bottom:12px;">Un alumno por línea. Podés agregar, editar o eliminar nombres.</p>
+    <textarea id="alumnos-editor" style="
+      flex:1; min-height:320px; background:var(--surf2); border:1px solid var(--bord);
+      border-radius:9px; color:var(--text); padding:12px; font-size:.83rem;
+      font-family:var(--fb); resize:vertical; line-height:1.7;
+      transition:border-color .18s;
+    " placeholder="APELLIDO, NOMBRE&#10;APELLIDO, NOMBRE&#10;..."></textarea>
+    <div style="font-size:.72rem;color:var(--mut);margin-top:6px;" id="alumnos-count"></div>
+    <div class="mod-foot" style="margin-top:12px;">
+      <button class="btn-cx" onclick="closeEditAlumnos()">Cancelar</button>
+      <button class="btn-ok" onclick="saveEditAlumnos()">✔ Guardar lista</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════
+   DATOS REALES — extraídos de la planilla institucional
+   ══════════════════════════════════════════════════════
+
+   ESTRUCTURA:
+     HORARIOS  → curso → ["Turno Mañana / descripción horaria"]
+     ESPS_POR_CURSO → curso → [especialidades disponibles]
+     ROTS      → especialidad → [rotaciones]
+     DOCS      → rotación_key (esp+rot) → [docentes]
+
+   PENDIENTE COMPLETAR: horarios marcados con TODO
+   ══════════════════════════════════════════════════════ */
+
+// Turno por curso (Mañana / Tarde)
+const HORARIOS = {
+  "1° 3°": ["Mañana — Miércoles 7:40 a 11:20"],
+  "1° 4°": ["Tarde — Martes 14:00 a 17:45"],
+  "2° 1°": ["Mañana — Miércoles y Jueves 7:40 a 11:20"],
+  "3° 1°": ["Mañana — 7:40 a 11:20"],
+  "4° 1°": ["Mañana"],
+  "4° 2°": ["Mañana"],
+  "4° 3°": ["Mañana"],
+  "5° 1°": ["Mañana"],
+  "5° 2°": ["Mañana"],
+  "5° 3°": ["Mañana"],
+  "6° 1°": ["Mañana"],
+  "6° 2°": ["Mañana"],
+  "6° 3°": ["Mañana"],
+  "6° 4°": ["Mañana"],
+};
+
+// Especialidades disponibles por curso
+const ESPS_POR_CURSO = {
+  "1° 3°": ["Prácticas Pre-profesionalizantes"],
+  "1° 4°": ["Prácticas Pre-profesionalizantes"],
+  "2° 1°": ["Prácticas Profesionalizantes"],
+  "3° 1°": ["Electromecánica"],
+  "4° 1°": ["Construcciones"],
+  "4° 2°": ["Mecánica"],
+  "4° 3°": ["Electromecánica"],
+  "5° 1°": ["Construcciones"],
+  "5° 2°": ["Mecánica"],
+  "5° 3°": ["Electromecánica"],
+  "6° 1°": ["Construcciones"],
+  "6° 2°": ["Mecánica"],
+  "6° 3°": ["Electromecánica"],
+  "6° 4°": ["Electromecánica"],
+};
+
+/* ══════════════════════════════════════════════════════
+   CURSOS_DATA — estructura central por curso.
+   Cada curso tiene sus rotaciones exactas y, por cada
+   rotación, el/los docente/s asignado/s.
+   Si hay UN solo docente → se autocompleta automáticamente.
+   Si hay MÁS de uno     → se muestra el selector.
+   ══════════════════════════════════════════════════════ */
+const CURSOS_DATA = {
+  // ── 1°3° — alumnos divididos por rotación ──
+  "1° 3°": {
+    especialidad: "Prácticas Pre-profesionalizantes",
+    rotaciones: [
+      { nombre: "1. Ajuste", docentes: ["Varela Tomás"], alumnos: [
+        "GUEVARA FONSECA, EDUARDO RAUL","HONORATO, BENJAMIN URIEL","ISAGUIRRE, ELEAZAR ISAAC",
+        "MEDINA PRADO, TOMAS MIQUEAS","MENDOZA ARIAS, RAMIRO EZEQUIEL","MOLINA GOMEZ, EMMA FRANCHESCA",
+        "MUÑOZ ALVARES, ANGELO BAUTISTA","MUÑOZ, VALENTIN DALMIRO"
+      ]},
+      { nombre: "2. Carpintería", docentes: ["Michel María"], alumnos: [
+        "CALO LOPEZ, KEILA JOCELYN YASMIN","CARRERA VIDELA, ABDIAS ISMAEL","CATALDO PEREZ, BRISA YASMIN",
+        "DELSON AMAYA, TOMAS GABRIEL","ESQUICE QUEVEDO, GASTÓN LIONEL OSCAR","FLORES LUQUEZ, MILAGROS AYELEN",
+        "GARCIA TAQUICHIRI, TAMARA MELANI","GONZALEZ SZODO, BRANDON YAIR","GONZALEZ, DYLAN TAYLOR"
+      ]},
+      { nombre: "3. Electricidad", docentes: ["Daniel Portillo"], alumnos: [
+        "PEREYRA RIVAS, TOMAS","PUEBLA PASTRAN, BENJAMIN ESTEBAN","QUINTEROS DIAZ, FRANCISCO",
+        "RODRIGUEZ RODRIGUEZ, LUIS EZEQUIEL","ROLDAN YANICELLI, THIAGO LIONEL","ROMERO, NATACHA SILVANA",
+        "SOSA ARJONA, BASTIAN ALEJANDRO LAUTARO","VILDOZO LA PORTILLA, LOURDES CAMILA"
+      ]},
+    ]
+  },
+
+  // ── 1°4° — alumnos divididos por rotación ──
+  "1° 4°": {
+    especialidad: "Prácticas Pre-profesionalizantes",
+    rotaciones: [
+      { nombre: "1. Ajuste", docentes: ["De Ipola Eduardo"], alumnos: [
+        "BARDAZZA, ISAI GUSTAVO","CACERES, EMILIA RINA","CASAL ARROYO, CIRO FRANCISCO",
+        "CATALANO ORTIZ, IAN MICHEL","CUADROS AGUILAR, BENJAMIN EZEQUIEL","DIAZ, TIAGO",
+        "ECHENIQUE LUCENTINI, JOSE MANUEL","ESPEJO MIRANDA, FRANCESCO","GIZZI AVILA, BAUTISTA JOAQUÍN",
+        "GUTIERREZ, DAMARIS AILÍN"
+      ]},
+      { nombre: "2. Carpintería", docentes: ["Castro Janet"], alumnos: [
+        "HERRERA PALET, SANTIAGO","HERRERA PINEDA, NEYEN ANDRÈS","IRANZO, BENJAMIN DAMIÁN",
+        "LOVERA AMIEVA MADRID, FACUNDO URIEL","LUCERO CASTRO, ALEXIS MAXIMILIANO",
+        "MAGALLANES VOGELMANN, AMBAR","MALAMAN, MATÍAS ALEJANDRO","MANCILLA OCHOA, DYLAN MICHAEL",
+        "MARTINEZ SALCEDO, ABRIL ESPERANZA","MOYANO, JAZMIN ABIGAIL"
+      ]},
+      { nombre: "3. Electricidad", docentes: ["Fernández Elías"], alumnos: [
+        "NUÑEZ BEAS, UZIEL NEHUEN","PRAVATA, RICARDO ANTONIO","QUIÑONES ARUSCA, JONATHAN IGNACIO",
+        "RODRIGUEZ CAMPO, TIAGO EMMANUEL","SANCHEZ NOLLAS, BASTIAN NOEL","SCROCCO TAPIA, FRANCESCO LEONARDO",
+        "TUR CASELLA, CIRO ALEXANDER","VARAS KOPP, JOSÉ FRANCISCO","VARGAS TRAMONTANA, BENJAMIN"
+      ]},
+    ]
+  },
+
+  // ── 2°1° — alumnos divididos por rotación ──
+  "2° 1°": {
+    especialidad: "Prácticas Profesionalizantes",
+    rotaciones: [
+      { nombre: "1. Construcción", docentes: ["Michel María"], alumnos: [
+        "ACIAR ALBORNOZ, MARÍA DEL ROSARIO","AGUERO GONZALEZ, ALVARO NAZARENO",
+        "ALBERTOLI ALBERTINI, SANTIAGO MATEO","BASTIAS DE CARA, VALENTINO IAN","CAILLY, THIAGO NICOLAS",
+        "CAMPOS, SEBASTIAN LEONEL","CHAILE, MARCOS SAMIR","CORTEZ GUEVARA, TOMAS","FUENTES ROMERO, AZUL MACARENA"
+      ]},
+      { nombre: "2. Electricidad", docentes: ["Castro Rolando"], alumnos: [
+        "GAYA, LAUREANO VALENTÍN","GONZALEZ, YOSELIN ARAMIL","GUERRA AGUILERA, BRIAN MARTÍN",
+        "MIATELLO BERMÚDEZ, ALEJANDRO BENJAMÍN","MILLICAY, ALEX URIEL","OROZCO SOSA, JEREMÍAS THIAGO",
+        "OSORIO MOLINA, DEIVI IAN JESÚS","PELAYES, IGNACIO GABRIEL"
+      ]},
+      { nombre: "3. Soldadura", docentes: ["Varela Tomás"], alumnos: [
+        "RODRIGUEZ, JAZMÍN ABRIL","RODRIGO, TOBÍAS JONATHAN JESÚS","ROJAS, ALMA NATASHA SOLANGE",
+        "SARMIENTO VELEZ, VALENTINA NAOMI","SIERRA GONZALEZ, TOBÍAS AGUSTÍN",
+        "SIERRA GONZALEZ, TOMÁS SEBASTIAN","VILLEGAS ROJAS, ALEJANDRO EMANUEL","ZAMORANO, DALMA DANILA"
+      ]},
+    ]
+  },
+
+  // ── 3°1° — alumnos divididos por rotación ──
+  "3° 1°": {
+    especialidad: "Electromecánica",
+    rotaciones: [
+      { nombre: "1. Electricidad", docentes: ["Bravo Rolando"], alumnos: [
+        "AGÜERO GONZALEZ, LAUTARO TOMÁS","ALTURRIA JOFRE, VALENTINA ABIGAIL","BAZAN GODOY, CRISTIAN BENJAMÍN",
+        "CARBAJAL, BELINDA PALOMA MELINA","CASTRO VALDEZ, LAUTARO EZEQUIEL",
+        "CORNEJO SANCHEZ, JULIANA GUADALUPE","GIMENEZ GIL, DYLAN YAIR"
+      ]},
+      { nombre: "2. Mecanizado", docentes: ["Moreno Brian"], alumnos: [
+        "GOMEZ LOZANO, CRISTIAN NICOLÁS","IBAÑEZ ESCALANTE, MIA ABIGAIL","IRACHETA, SANTIAGO JOAQUIN",
+        "LOPEZ LACOQUE, ALEXIS JOEL","LUCERO PANELO, GUILLERMO LIONEL",
+        "MARTIN ACOSTA, NICOLÁS GABRIEL","MEDINA GIL, MARTINA JULIETA"
+      ]},
+      { nombre: "3. Soldaduría", docentes: ["Parra Jorge"], alumnos: [
+        "MEYER, JUAN IGNACIO GABRIEL","REYNALS, VANESA JAZMIN","RODRIGUEZ ESPEJO, FRANCESCA NICOLE",
+        "SALCEDO, LUDMILA BELEN","SEGURA, JOAQUÍN VALENTINO","VARGAS GODOY, LUCA GASPAR JUSTINIANO"
+      ]},
+    ]
+  },
+
+  // ── 4°1° — todos los alumnos en todas las rotaciones ──
+  "4° 1°": {
+    especialidad: "Construcciones",
+    rotaciones: [
+      { nombre: "Construcción", docentes: ["Portillo Daniel", "Bru Maximiliano"], alumnos: [
+        "ARROYO GONZALEZ, LARA ABIGAIL","BAZÁN JARA, DIEGO LAUTARO DANILO","DAVECCHI CESPEDES, MAYRA ANABELLA",
+        "FLORES, ULISES DAVID","FUENTES NAVARRO, JULIÁN ISMAEL","HUERTA ATENCIO, NEREA DANISA",
+        "LUCERO CASTRO, RODRIGO SAMUEL","MENDOZA ARCE, MILAGROS VALENTINA","OSORIO MOLL, LUCA JESÚS",
+        "PERALTA CASTRO, ROCIO GUADALUPE","QUIROGA, CAMILA NEREA"
+      ]},
+    ]
+  },
+
+  // ── 4°2° — todos los alumnos en todas las rotaciones ──
+  "4° 2°": {
+    especialidad: "Mecánica",
+    rotaciones: [
+      { nombre: "1. Tornería",     docentes: ["Cáceres Diego"],  alumnos: null },
+      { nombre: "2. Electricidad", docentes: ["Bravo Rolando"],  alumnos: null },
+      { nombre: "3. Soldaduría",   docentes: ["Parra Jorge"],    alumnos: null },
+    ],
+    alumnosCurso: [
+      "ARREGUEZ GIMENEZ, SANTINO JULIÁN","SUAREZ, ENZO JOAQUIN","CASTRO MARCHAN, THIAGO AURELIANO",
+      "CHADES ALARCON, FRANCISCO ZAIR","CONCHA CALDERÓN, THIAGO GADIEL",
+      "DE CARLE DALCOLMO, RODRIGO FRANCISCO EZEQUIEL","DELGADILLO, IGNACIO JOAQUÍN SANTINO",
+      "DIAZ MIRANDA, OCTAVIO ARTURO","DOMINGUEZ MONTENEGRO, GONZALO MATIAS S",
+      "ESPONDA ALFARO, GUADALUPE AIME","FAMOSO TAPIA, TIZIANO JULIAN","GALVEZ SOSA, SERGIO LAUTARO",
+      "LOPEZ TOLEDO, AGUSTÍN EMMANUEL","MONTAÑEZ ARANGUEZ, DYLAN ADRIEL",
+      "MONTUELLE BESACHO, FRANCISCO LIONEL","PERDOMO CASTILLO, JAVIER ALEJANDRO",
+      "PEREZ, JENNIFER FABIANA","SANHUEZA PELAYES, JEREMIAS LEONEL","VIDELA FLORES, JEREMÍAS ELOY"
+    ]
+  },
+
+  // ── 4°3° — todos los alumnos en todas las rotaciones ──
+  "4° 3°": {
+    especialidad: "Electromecánica",
+    rotaciones: [
+      { nombre: "1. Tornería",     docentes: ["Cáceres Diego"],  alumnos: null },
+      { nombre: "2. Electricidad", docentes: ["Bravo Rolando"],  alumnos: null },
+      { nombre: "3. Soldaduría",   docentes: ["Parra Jorge"],    alumnos: null },
+    ],
+    alumnosCurso: [
+      "CARRIZO PUEBLA, LUCIANO RICARDO","CÁSERES, LAUTARO DAMIÁN","GARAY, LUCIANO JOEL",
+      "BASILE ACEVEDO, AGUSTÍN DAN","FARIAS LONGONE, ALEXANDER OSCAR","GOMEZ DIAZ, PATRICIO BENJAMÍN",
+      "GONZALEZ LAGOS, RODRIGO AGUSTÍN","GONZALEZ NAVARRO, ANGELO ISAIAS","GONZALEZ ROMERO, SANTIAGO MANUEL",
+      "HUATAY URIOL, JUAN IGNACIO","LOPEZ, JUAN MANUEL","MENDOZA ARIAS, ENZO LUCAS",
+      "MORALES LOBOS, AARON CESAR","ORTIZ, ZAHIRA JOSEFINA","OVIEDO-VELAZQUEZ, FABRIZIO ISAÍAS",
+      "OZAN-GONZALEZ, AQUILES DANIEL","POCOSGNICH GONZALEZ, DANTE ANGELO","SPOSATO SCHMITT, SANTIAGO LUCIANO"
+    ]
+  },
+
+  // ── 5°1° — todos los alumnos en todas las rotaciones ──
+  "5° 1°": {
+    especialidad: "Construcciones",
+    rotaciones: [
+      { nombre: "Sin Rotación", docentes: ["Moreno Brian", "Miranda Claudio", "Michel María"], alumnos: null },
+    ],
+    alumnosCurso: [
+      "AZULA, JULIETA DENISE","BRIZUELA, TIAGO URIEL","FERRARO MORALES, ROSA BRUNELA",
+      "COCOLA BAMONDE, JADE SOFIA","GALVEZ SOSA, LARA M. DE LOS ÁNGELES","GELVEZ ECHEVARRIETA, TAMARA AGUSTINA",
+      "LEYBA LUNA, NEYEN ARÓN","PITTON, MARTIN OCTAVIO","QUIROGA LAZCORRETA, ISAÍAS ABEL",
+      "RETA, ENZO BAUTISTA","RIVERO CAMPANELLA, MARÍA AZUL","RIVERO CAMPANELLA, VALENTINO LUCIANO",
+      "RUIZ, LEONEL GINO ANDRÉS","SOSA FLORES, IGNACIO URIEL","VELAZQUEZ JABALOYES, GASTÓN MARTÍN"
+    ]
+  },
+
+  // ── 5°2° — todos los alumnos en todas las rotaciones ──
+  "5° 2°": {
+    especialidad: "Mecánica",
+    rotaciones: [
+      { nombre: "1. CNC",       docentes: ["Pennesi Agustin"],    alumnos: null },
+      { nombre: "2. Neumática", docentes: ["Castillo Joaquin"],  alumnos: null },
+      { nombre: "3. Mecanizado",docentes: ["Cáceres Diego"],     alumnos: null },
+    ],
+    alumnosCurso: [
+      "CARASA CORTES, LAUTARO EXEQUIEL","DIAZ, JAVIER FERNANDO","DOMINGUEZ, ENZO MATÍAS",
+      "FERNANDEZ RIVEROS, NAHUEL AGUSTIN","OCHOA, DANIELA ABIGAIL","PINEDA, TIAGO NAHUEL",
+      "ACIAR ALBORNOZ, SANTINO AGUSTÍN","GODOY QUIROGA, EMILIANO EZEQUIEL",
+      "MARTINEZ MOYANO, FACUNDO NAHUEL","NUÑEZ, NAHUEL ALEJANDRO","VILLEGAS MOPARDO, BELÉN"
+    ]
+  },
+
+  // ── 5°3° — todos los alumnos en todas las rotaciones ──
+  "5° 3°": {
+    especialidad: "Electromecánica",
+    rotaciones: [
+      { nombre: "1. CNC",       docentes: ["Pennesi Agustin"],    alumnos: null },
+      { nombre: "2. Neumática", docentes: ["Sánchez Cristian"],  alumnos: null },
+      { nombre: "3. Mecanizado",docentes: ["Castillo Joaquin"],  alumnos: null },
+    ],
+    alumnosCurso: [
+      "AGUILERA, AMIR JULIAN","ALBAREZ GONZALEZ, MATÍAS NICOLÁS","CABANILLA, CARLOS DANIEL",
+      "CAMPOS, OSCAR EDUARDO","CARRIZO NICOLOFF, LAURA MARIELA","CLAROTTI LAFFERRIERE, VALENTINO",
+      "ECHENIQUE LUCENTINI, JUAN BAUTISTA","GONZALEZ, GABRIEL ALESSANDRO","JARA ROGUIER, TEO",
+      "JARA, ESTEBAN ANGEL NAHUEL","LEPEZ, MÁXIMO BENJAMÍN","LOYOLA PESCARA, JULIETA VALENTINA",
+      "MUÑOZ PERALTA, LUCAS MAXIMILIANO","ORO CATALAN, BRIAN JOEL","PINO MORETTI, VALENTINO",
+      "RETA MERCADO, THIAGO JESÚS ARÓN","ROJAS, THIAGO VALENTÍN","VIDELA ASSON, JUAN CRUZ",
+      "ZARATE PEREYRA, AUGUSTO BENJAMÍN","ZARATE PEREYRA, LAUTARO URIEL",
+      "CARRASCO LEAÑO, LUZ BIANCA","RUIZ, JUAN LAUTARO"
+    ]
+  },
+
+  // ── 6°1° — todos los alumnos en todas las rotaciones ──
+  "6° 1°": {
+    especialidad: "Construcciones",
+    rotaciones: [
+      { nombre: "Sin Rotación", docentes: ["Miranda Claudio", "Bru Maximiliano"], alumnos: null },
+    ],
+    alumnosCurso: [
+      "ARRIETA VERDEJO, JOAQUÍN SEBASTIÁN","ARROYO MASSA, ELÍAS DARÍO","BAIGORRIA PORTABELLA, PAULA CELESTE",
+      "CACERES, DANIEL DARIAN","CEPEDA, FACUNDO NAHUEL","HOREN, DANIEL LUIS ALEJANDRO",
+      "LLEDÓ, MÁXIMO VICENTE","MONTENEGRO, JOEL EMILIANO","MORALES, DAVID ISMAEL",
+      "PEREZ ELST, BRIAN HERNÁN","QUINTEROS DÍAZ, JOAQUÍN","QUIROGA MARTINEZ, MAXIMILIANO JESÚS",
+      "ROJAS DIAZ, ANTONIO GASTÓN"
+    ]
+  },
+
+  // ── 6°2° — todos los alumnos en todas las rotaciones ──
+  "6° 2°": {
+    especialidad: "Mecánica",
+    rotaciones: [
+      { nombre: "1. Oficina Técnica", docentes: ["Varela Tomás"],     alumnos: null },
+      { nombre: "2. Mantenimiento",   docentes: ["Castillo Joaquin"], alumnos: null },
+      { nombre: "3. CNC",             docentes: ["Pennesi Agustin"],   alumnos: null },
+    ],
+    alumnosCurso: [
+      "BORSELLINO FUENTES, LUCIANO LAUTARO","CATALDO PEREZ, CANDELA LUCÍA","GIMENEZ GIL, WILLIAM URIEL",
+      "OROS, LUIS SANTIAGO","PONCE, VALENTINA MARÍA ELENA","PORRA SALINAS, MAURO IGNACIO",
+      "QUIROGA CIMARELLI, RODRIGO FACUNDO","RODRIGUEZ ESPEJO, BENJAMIN ROMAN",
+      "RODRIGUEZ QUIROGA, NAHUEL VALENTÍN","TORRES CHAVES, CAMILO AGUSTIN"
+    ]
+  },
+
+  // ── 6°3° — todos los alumnos en todas las rotaciones ──
+  "6° 3°": {
+    especialidad: "Electromecánica",
+    rotaciones: [
+      { nombre: "1. Automatización",          docentes: ["Aldeco Víctor"],    alumnos: null },
+      { nombre: "2. Fundamentos PLC Arduino", docentes: ["Sánchez Cristian"], alumnos: null },
+      { nombre: "3. CNC",                     docentes: ["Pennesi Agustin"],   alumnos: null },
+    ],
+    alumnosCurso: [
+      "BRIZUELA PERNICCI, OCTAVIO GERÓNIMO","CARTES MOYA, MORENA SOFÍA","GARRO MONTAÑEZ, MAIA JAZMÍN",
+      "GIORDANO, LAUTARO URIEL","GONZALEZ, ROCÍO CAMILA","IZAGUIRRE, GASTÓN GIULIANO",
+      "JORQUERA MARINERO, JOSÉ IGNACIO","LUCERO, LEONARDO FACUNDO","MANTOVANI LENCINA, MARCOS LIONEL",
+      "OCAMPO, GASTÓN LEONEL","ORTIZ, EMILIANO JAVIER","PATIRI BASTIAS, WALTER SAMUEL",
+      "RODRIGUEZ CONTRERA, PABLO LEONARDO","RODRIGUEZ LAUGLE, JOAQUIN","SOSA, MÁXIMO ROMÁN",
+      "VEGA TOBARES, JULIÁN TADEO","ZAMBRANO, MARTÍN JOSÉ","ZAMORANO, FACUNDO AGUSTÍN"
+    ]
+  },
+
+  // ── 6°4° — todos los alumnos en todas las rotaciones ──
+  "6° 4°": {
+    especialidad: "Electromecánica",
+    rotaciones: [
+      { nombre: "1. Automatización",          docentes: ["Aldeco Víctor"],    alumnos: null },
+      { nombre: "2. Fundamentos PLC Arduino", docentes: ["Sánchez Cristian"], alumnos: null },
+      { nombre: "3. CNC",                     docentes: ["Pennis Agustin"],   alumnos: null },
+    ],
+    alumnosCurso: [
+      "BARRIOS, RENZO CIRO JESÚS","CONIL, BRUNO ANDRÉS","FARRANDO ESQUICE, JOAQUÍN WALTER ANDRÉS",
+      "FORTTE PATTINI, EDUARDO SANTINO","LOPEZ, YOSELIE ARIADNA","NUÑEZ, SANTINO LEONEL",
+      "PADILLA MORENO, FLORENCIA ESTEFANÍA","PRADO LUCERO, LUCAS LEONEL","PUEBLA TORREZ, MATIAS URIEL",
+      "CLAROTTI LAFFERRIERE, PRIMO GIOVANNI","DIAZ FOZZATTI, THOMAS LIONEL","ESPONDA ALFARO, JAZMÍN ALUHE",
+      "GALBAN GODOY, JUAN IGNACIO","GONZALEZ MOLINA, KEVIN MARTÍN","GONZALEZ SILANES, NICOLÁS AGUSTÍN",
+      "GUAQUINCHAY GIMENEZ, JORGE ANTONIO URIEL","ROBLEDO, MARTIN ALEJO","ROJAS, FRANCO EZEQUIEL",
+      "ZUÑIGA PONCE, MÁXIMO LAUTARO EZEQUIEL"
+    ]
+  },
+}
+
+/* ── ALUMNOS ──
+   Estructura: ALUMNOS_POR_CURSO[curso][rotacion] = [lista]
+   Para cursos sin rotación propia (4° en adelante): lista directa
+   ────────────────────────────────────────────────────────── */
+const ALUMNOS_POR_CURSO = {
+
+  "1° 3°": [
+    "GUEVARA FONSECA, EDUARDO RAUL","HONORATO, BENJAMIN URIEL","ISAGUIRRE, ELEAZAR ISAAC",
+    "MEDINA PRADO, TOMAS MIQUEAS","MENDOZA ARIAS, RAMIRO EZEQUIEL","MOLINA GOMEZ, EMMA FRANCHESCA",
+    "MUÑOZ ALVARES, ANGELO BAUTISTA","MUÑOZ, VALENTIN DALMIRO",
+    "CALO LOPEZ, KEILA JOCELYN YASMIN","CARRERA VIDELA, ABDIAS ISMAEL","CATALDO PEREZ, BRISA YASMIN",
+    "DELSON AMAYA, TOMAS GABRIEL","ESQUICE QUEVEDO, GASTÓN LIONEL OSCAR","FLORES LUQUEZ, MILAGROS AYELEN",
+    "GARCIA TAQUICHIRI, TAMARA MELANI","GONZALEZ SZODO, BRANDON YAIR","GONZALEZ, DYLAN TAYLOR",
+    "PEREYRA RIVAS, TOMAS","PUEBLA PASTRAN, BENJAMIN ESTEBAN","QUINTEROS DIAZ, FRANCISCO",
+    "RODRIGUEZ RODRIGUEZ, LUIS EZEQUIEL","ROLDAN YANICELLI, THIAGO LIONEL","ROMERO, NATACHA SILVANA",
+    "SOSA ARJONA, BASTIAN ALEJANDRO LAUTARO","VILDOZO LA PORTILLA, LOURDES CAMILA"
+  ],
+  "1° 4°": [
+    "BARDAZZA, ISAI GUSTAVO","CACERES, EMILIA RINA","CASAL ARROYO, CIRO FRANCISCO",
+    "CATALANO ORTIZ, IAN MICHEL","CUADROS AGUILAR, BENJAMIN EZEQUIEL","DIAZ, TIAGO",
+    "ECHENIQUE LUCENTINI, JOSE MANUEL","ESPEJO MIRANDA, FRANCESCO","GIZZI AVILA, BAUTISTA JOAQUÍN",
+    "GUTIERREZ, DAMARIS AILÍN",
+    "HERRERA PALET, SANTIAGO","HERRERA PINEDA, NEYEN ANDRÈS","IRANZO, BENJAMIN DAMIÁN",
+    "LOVERA AMIEVA MADRID, FACUNDO URIEL","LUCERO CASTRO, ALEXIS MAXIMILIANO",
+    "MAGALLANES VOGELMANN, AMBAR","MALAMAN, MATÍAS ALEJANDRO","MANCILLA OCHOA, DYLAN MICHAEL",
+    "MARTINEZ SALCEDO, ABRIL ESPERANZA","MOYANO, JAZMIN ABIGAIL",
+    "NUÑEZ BEAS, UZIEL NEHUEN","PRAVATA, RICARDO ANTONIO","QUIÑONES ARUSCA, JONATHAN IGNACIO",
+    "RODRIGUEZ CAMPO, TIAGO EMMANUEL","SANCHEZ NOLLAS, BASTIAN NOEL","SCROCCO TAPIA, FRANCESCO LEONARDO",
+    "TUR CASELLA, CIRO ALEXANDER","VARAS KOPP, JOSÉ FRANCISCO","VARGAS TRAMONTANA, BENJAMIN"
+  ],
+  "2° 1°": [
+    "ACIAR ALBORNOZ, MARÍA DEL ROSARIO","AGUERO GONZALEZ, ALVARO NAZARENO",
+    "ALBERTOLI ALBERTINI, SANTIAGO MATEO","BASTIAS DE CARA, VALENTINO IAN","CAILLY, THIAGO NICOLAS",
+    "CAMPOS, SEBASTIAN LEONEL","CHAILE, MARCOS SAMIR","CORTEZ GUEVARA, TOMAS","FUENTES ROMERO, AZUL MACARENA",
+    "GAYA, LAUREANO VALENTÍN","GONZALEZ, YOSELIN ARAMIL","GUERRA AGUILERA, BRIAN MARTÍN",
+    "MIATELLO BERMÚDEZ, ALEJANDRO BENJAMÍN","MILLICAY, ALEX URIEL","OROZCO SOSA, JEREMÍAS THIAGO",
+    "OSORIO MOLINA, DEIVI IAN JESÚS","PELAYES, IGNACIO GABRIEL",
+    "RODRIGUEZ, JAZMÍN ABRIL","RODRIGO, TOBÍAS JONATHAN JESÚS","ROJAS, ALMA NATASHA SOLANGE",
+    "SARMIENTO VELEZ, VALENTINA NAOMI","SIERRA GONZALEZ, TOBÍAS AGUSTÍN",
+    "SIERRA GONZALEZ, TOMÁS SEBASTIAN","VILLEGAS ROJAS, ALEJANDRO EMANUEL","ZAMORANO, DALMA DANILA"
+  ],
+  "3° 1°": [
+    "GOMEZ LOZANO, CRISTIAN NICOLÁS","IBAÑEZ ESCALANTE, MIA ABIGAIL","IRACHETA, SANTIAGO JOAQUIN",
+    "LOPEZ LACOQUE, ALEXIS JOEL","LUCERO PANELO, GUILLERMO LIONEL","MARTIN ACOSTA, NICOLÁS GABRIEL",
+    "MEDINA GIL, MARTINA JULIETA",
+    "AGÜERO GONZALEZ, LAUTARO TOMÁS","ALTURRIA JOFRE, VALENTINA ABIGAIL","BAZAN GODOY, CRISTIAN BENJAMÍN",
+    "CARBAJAL, BELINDA PALOMA MELINA","CASTRO VALDEZ, LAUTARO EZEQUIEL","CORNEJO SANCHEZ, JULIANA GUADALUPE",
+    "GIMENEZ GIL, DYLAN YAIR",
+    "MEYER, JUAN IGNACIO GABRIEL","REYNALS, VANESA JAZMIN","RODRIGUEZ ESPEJO, FRANCESCA NICOLE",
+    "SALCEDO, LUDMILA BELEN","SEGURA, JOAQUÍN VALENTINO","VARGAS GODOY, LUCA GASPAR JUSTINIANO"
+  ],
+
+  // ── 4° en adelante — lista única por curso ──
+  "4° 1°": [
+    "ARROYO GONZALEZ, LARA ABIGAIL","BAZÁN JARA, DIEGO LAUTARO DANILO","DAVECCHI CESPEDES, MAYRA ANABELLA",
+    "FLORES, ULISES DAVID","FUENTES NAVARRO, JULIÁN ISMAEL","HUERTA ATENCIO, NEREA DANISA",
+    "LUCERO CASTRO, RODRIGO SAMUEL","MENDOZA ARCE, MILAGROS VALENTINA","OSORIO MOLL, LUCA JESÚS",
+    "PERALTA CASTRO, ROCIO GUADALUPE","QUIROGA, CAMILA NEREA"
+  ],
+  "4° 2°": [
+    "ARREGUEZ GIMENEZ, SANTINO JULIÁN","SUAREZ, ENZO JOAQUIN","CASTRO MARCHAN, THIAGO AURELIANO",
+    "CHADES ALARCON, FRANCISCO ZAIR","CONCHA CALDERÓN, THIAGO GADIEL",
+    "DE CARLE DALCOLMO, RODRIGO FRANCISCO EZEQUIEL","DELGADILLO, IGNACIO JOAQUÍN SANTINO",
+    "DIAZ MIRANDA, OCTAVIO ARTURO","DOMINGUEZ MONTENEGRO, GONZALO MATIAS S",
+    "ESPONDA ALFARO, GUADALUPE AIME","FAMOSO TAPIA, TIZIANO JULIAN","GALVEZ SOSA, SERGIO LAUTARO",
+    "LOPEZ TOLEDO, AGUSTÍN EMMANUEL","MONTAÑEZ ARANGUEZ, DYLAN ADRIEL",
+    "MONTUELLE BESACHO, FRANCISCO LIONEL","PERDOMO CASTILLO, JAVIER ALEJANDRO",
+    "PEREZ, JENNIFER FABIANA","SANHUEZA PELAYES, JEREMIAS LEONEL","VIDELA FLORES, JEREMÍAS ELOY"
+  ],
+  "4° 3°": [
+    "CARRIZO PUEBLA, LUCIANO RICARDO","CÁSERES, LAUTARO DAMIÁN","GARAY, LUCIANO JOEL",
+    "BASILE ACEVEDO, AGUSTÍN DAN","FARIAS LONGONE, ALEXANDER OSCAR","GOMEZ DIAZ, PATRICIO BENJAMÍN",
+    "GONZALEZ LAGOS, RODRIGO AGUSTÍN","GONZALEZ NAVARRO, ANGELO ISAIAS","GONZALEZ ROMERO, SANTIAGO MANUEL",
+    "HUATAY URIOL, JUAN IGNACIO","LOPEZ, JUAN MANUEL","MENDOZA ARIAS, ENZO LUCAS",
+    "MORALES LOBOS, AARON CESAR","ORTIZ, ZAHIRA JOSEFINA","OVIEDO-VELAZQUEZ, FABRIZIO ISAÍAS",
+    "OZAN-GONZALEZ, AQUILES DANIEL","POCOSGNICH GONZALEZ, DANTE ANGELO","SPOSATO SCHMITT, SANTIAGO LUCIANO"
+  ],
+  "5° 1°": [
+    "AZULA, JULIETA DENISE","BRIZUELA, TIAGO URIEL","FERRARO MORALES, ROSA BRUNELA",
+    "COCOLA BAMONDE, JADE SOFIA","GALVEZ SOSA, LARA M. DE LOS ÁNGELES","GELVEZ ECHEVARRIETA, TAMARA AGUSTINA",
+    "LEYBA LUNA, NEYEN ARÓN","PITTON, MARTIN OCTAVIO","QUIROGA LAZCORRETA, ISAÍAS ABEL",
+    "RETA, ENZO BAUTISTA","RIVERO CAMPANELLA, MARÍA AZUL","RIVERO CAMPANELLA, VALENTINO LUCIANO",
+    "RUIZ, LEONEL GINO ANDRÉS","SOSA FLORES, IGNACIO URIEL","VELAZQUEZ JABALOYES, GASTÓN MARTÍN"
+  ],
+  "5° 2°": [
+    "CARASA CORTES, LAUTARO EXEQUIEL","DIAZ, JAVIER FERNANDO","DOMINGUEZ, ENZO MATÍAS",
+    "FERNANDEZ RIVEROS, NAHUEL AGUSTIN","OCHOA, DANIELA ABIGAIL","PINEDA, TIAGO NAHUEL",
+    "ACIAR ALBORNOZ, SANTINO AGUSTÍN","GODOY QUIROGA, EMILIANO EZEQUIEL",
+    "MARTINEZ MOYANO, FACUNDO NAHUEL","NUÑEZ, NAHUEL ALEJANDRO","VILLEGAS MOPARDO, BELÉN"
+  ],
+  "5° 3°": [
+    "AGUILERA, AMIR JULIAN","ALBAREZ GONZALEZ, MATÍAS NICOLÁS","CABANILLA, CARLOS DANIEL",
+    "CAMPOS, OSCAR EDUARDO","CARRIZO NICOLOFF, LAURA MARIELA","CLAROTTI LAFFERRIERE, VALENTINO",
+    "ECHENIQUE LUCENTINI, JUAN BAUTISTA","GONZALEZ, GABRIEL ALESSANDRO","JARA ROGUIER, TEO",
+    "JARA, ESTEBAN ANGEL NAHUEL","LEPEZ, MÁXIMO BENJAMÍN","LOYOLA PESCARA, JULIETA VALENTINA",
+    "MUÑOZ PERALTA, LUCAS MAXIMILIANO","ORO CATALAN, BRIAN JOEL","PINO MORETTI, VALENTINO",
+    "RETA MERCADO, THIAGO JESÚS ARÓN","ROJAS, THIAGO VALENTÍN","VIDELA ASSON, JUAN CRUZ",
+    "ZARATE PEREYRA, AUGUSTO BENJAMÍN","ZARATE PEREYRA, LAUTARO URIEL",
+    "CARRASCO LEAÑO, LUZ BIANCA","RUIZ, JUAN LAUTARO"
+  ],
+  "6° 1°": [
+    "ARRIETA VERDEJO, JOAQUÍN SEBASTIÁN","ARROYO MASSA, ELÍAS DARÍO","BAIGORRIA PORTABELLA, PAULA CELESTE",
+    "CACERES, DANIEL DARIAN","CEPEDA, FACUNDO NAHUEL","HOREN, DANIEL LUIS ALEJANDRO",
+    "LLEDÓ, MÁXIMO VICENTE","MONTENEGRO, JOEL EMILIANO","MORALES, DAVID ISMAEL",
+    "PEREZ ELST, BRIAN HERNÁN","QUINTEROS DÍAZ, JOAQUÍN","QUIROGA MARTINEZ, MAXIMILIANO JESÚS",
+    "ROJAS DIAZ, ANTONIO GASTÓN"
+  ],
+  "6° 2°": [
+    "BORSELLINO FUENTES, LUCIANO LAUTARO","CATALDO PEREZ, CANDELA LUCÍA","GIMENEZ GIL, WILLIAM URIEL",
+    "OROS, LUIS SANTIAGO","PONCE, VALENTINA MARÍA ELENA","PORRA SALINAS, MAURO IGNACIO",
+    "QUIROGA CIMARELLI, RODRIGO FACUNDO","RODRIGUEZ ESPEJO, BENJAMIN ROMAN",
+    "RODRIGUEZ QUIROGA, NAHUEL VALENTÍN","TORRES CHAVES, CAMILO AGUSTIN"
+  ],
+  "6° 3°": [
+    "BRIZUELA PERNICCI, OCTAVIO GERÓNIMO","CARTES MOYA, MORENA SOFÍA","GARRO MONTAÑEZ, MAIA JAZMÍN",
+    "GIORDANO, LAUTARO URIEL","GONZALEZ, ROCÍO CAMILA","IZAGUIRRE, GASTÓN GIULIANO",
+    "JORQUERA MARINERO, JOSÉ IGNACIO","LUCERO, LEONARDO FACUNDO","MANTOVANI LENCINA, MARCOS LIONEL",
+    "OCAMPO, GASTÓN LEONEL","ORTIZ, EMILIANO JAVIER","PATIRI BASTIAS, WALTER SAMUEL",
+    "RODRIGUEZ CONTRERA, PABLO LEONARDO","RODRIGUEZ LAUGLE, JOAQUIN","SOSA, MÁXIMO ROMÁN",
+    "VEGA TOBARES, JULIÁN TADEO","ZAMBRANO, MARTÍN JOSÉ","ZAMORANO, FACUNDO AGUSTÍN"
+  ],
+  "6° 4°": [
+    "BARRIOS, RENZO CIRO JESÚS","CONIL, BRUNO ANDRÉS","FARRANDO ESQUICE, JOAQUÍN WALTER ANDRÉS",
+    "FORTTE PATTINI, EDUARDO SANTINO","LOPEZ, YOSELIE ARIADNA","NUÑEZ, SANTINO LEONEL",
+    "PADILLA MORENO, FLORENCIA ESTEFANÍA","PRADO LUCERO, LUCAS LEONEL","PUEBLA TORREZ, MATIAS URIEL",
+    "CLAROTTI LAFFERRIERE, PRIMO GIOVANNI","DIAZ FOZZATTI, THOMAS LIONEL","ESPONDA ALFARO, JAZMÍN ALUHE",
+    "GALBAN GODOY, JUAN IGNACIO","GONZALEZ MOLINA, KEVIN MARTÍN","GONZALEZ SILANES, NICOLÁS AGUSTÍN",
+    "GUAQUINCHAY GIMENEZ, JORGE ANTONIO URIEL","ROBLEDO, MARTIN ALEJO","ROJAS, FRANCO EZEQUIEL",
+    "ZUÑIGA PONCE, MÁXIMO LAUTARO EZEQUIEL"
+  ],
+};
+
+const COLORS = ["#4f8ef7","#3ecf8e","#f7c14f","#f76f6f","#a78bfa","#f97316","#06b6d4","#84cc16"];
+
+/* ── ESTADO ── */
+const S = { curso:"", hor:"", esp:"", rot:"", doc:"", alumnos:[], activities:[], openId:null, rotacionesAlumnos:{} };
+
+/* ── AUTH ── */
+function doLogin() {
+  const email = document.getElementById("li-email").value.trim();
+  if (!email) { toast("Ingresá un correo","err"); return; }
+  if (window.DEMO_MODE) {
+    const n = email.split("@")[0].replace(/[._]/g," ").replace(/\b\w/g,c=>c.toUpperCase());
+    startApp(n);
+  } else {
+    const { auth, signInWithEmailAndPassword } = window._fb;
+    signInWithEmailAndPassword(auth, email, document.getElementById("li-pass").value)
+      .then(c => startApp(c.user.displayName || email.split("@")[0]))
+      .catch(() => toast("Credenciales incorrectas","err"));
+  }
+}
+function doLogout() {
+  if (!window.DEMO_MODE && window._fb) window._fb.signOut(window._fb.auth);
+  document.getElementById("login-screen").style.display = "flex";
+  document.getElementById("app").style.display = "none";
+}
+function startApp(name) {
+  document.getElementById("login-screen").style.display = "none";
+  document.getElementById("app").style.display = "flex";
+  document.getElementById("un").textContent = name;
+  if (window.DEMO_MODE) document.getElementById("demo-bar").style.display = "flex";
+  else document.getElementById("demo-notice").style.display = "none";
+  restoreAlumnosFromStorage();
+  // On mobile, show sidebar open by default so user sees the filters right away
+  if (window.innerWidth <= 860) {
+    document.querySelector(".sidebar").classList.add("open");
+  }
+}
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("li-pass").addEventListener("keydown", e => { if(e.key==="Enter") doLogin(); });
+  document.getElementById("li-email").addEventListener("keydown", e => { if(e.key==="Enter") document.getElementById("li-pass").focus(); });
+  document.getElementById("m-fec").valueAsDate = new Date();
+
+  // Show/hide toggle button based on screen size
+  function checkMobile() {
+    const isMobile = window.innerWidth <= 860;
+    const btn = document.getElementById("btn-toggle-sidebar");
+    if (btn) btn.style.display = isMobile ? "flex" : "none";
+    const pill = document.querySelector(".user-pill");
+    if (pill) pill.style.display = isMobile ? "none" : "flex";
+    // On desktop always show sidebar
+    const sb = document.querySelector(".sidebar");
+    if (sb && !isMobile) sb.classList.remove("open");
+  }
+  checkMobile();
+  window.addEventListener("resize", checkMobile);
+});
+
+function toggleSidebar() {
+  const sb = document.querySelector(".sidebar");
+  sb.classList.toggle("open");
+}
+
+// Auto-close sidebar on mobile after pressing Actividades or Ver alumnos
+function closeSidebarMobile() {
+  if (window.innerWidth <= 860) {
+    document.querySelector(".sidebar").classList.remove("open");
+  }
+}
+
+/* ── DROPDOWNS ── */
+function fillSel(id, opts, ph, on) {
+  const s = document.getElementById(id);
+  s.innerHTML = `<option value="">${ph}</option>`;
+  opts.forEach(o => { const op = document.createElement("option"); op.value = op.textContent = o; s.appendChild(op); });
+  s.disabled = !on;
+}
+function badge(id, on) { const el = document.getElementById("b"+id); if (el) el.classList.toggle("on",on); }
+
+function onCurso() {
+  S.curso = document.getElementById("s-curso").value;
+  S.hor = S.esp = S.rot = S.doc = ""; S.alumnos = [];
+  badge(2,false); badge(3,false); badge(4,false); badge(5,false);
+  document.getElementById("esp-display").style.color = "var(--mut)";
+  document.getElementById("esp-display").textContent = "— Se completa según el curso —";
+  const _hd = document.getElementById("hor-display");
+  _hd.textContent = "— Se completa según el curso —";
+  _hd.style.color = "var(--mut)";
+  _hd.style.borderColor = "";
+  fillSel("s-rot", [], "— Seleccioná rotación —", false);
+  resetDocField(false);
+
+  if (!S.curso) { checkViz(); return; }
+
+  // Paso 1: turno automático (un solo turno por curso)
+  const horarios = HORARIOS[S.curso] || [];
+  S.hor = horarios[0] || "";
+  const horDisplay = document.getElementById("hor-display");
+  if (S.hor) {
+    horDisplay.textContent = S.hor;
+    horDisplay.style.color = "var(--text)";
+    horDisplay.style.borderColor = "var(--grn)";
+    badge(2, true);
+  }
+
+  // Paso 2: especialidad automática
+  const cd = CURSOS_DATA[S.curso];
+  if (cd) {
+    S.esp = cd.especialidad;
+    badge(3, true);
+    document.getElementById("esp-display").style.color = "var(--text)";
+    document.getElementById("esp-display").textContent = cd.especialidad;
+
+    // Paso 3: habilitar rotaciones
+    const rotNames = cd.rotaciones.map(r => r.nombre);
+    fillSel("s-rot", rotNames, "— Seleccioná rotación —", true);
+    badge(4, false);
+  }
+
+  checkViz();
+}
+
+function onHor() { /* turno ahora se setea automáticamente en onCurso */ }
+
+// Paso 3 del sidebar ahora muestra la especialidad (informativo) y paso 4 la rotación
+// Renombramos internamente: s-esp ya no se usa como selector, mostramos texto fijo
+function onEsp() {
+  // No se usa (el campo especialidad se llena solo desde CURSOS_DATA)
+}
+
+function onRot() {
+  S.rot = document.getElementById("s-rot").value;
+  S.doc = ""; S.alumnos = [];
+  badge(4, !!S.rot); badge(5, false);
+
+  if (!S.rot) { resetDocField(false); checkViz(); return; }
+
+  const cd = CURSOS_DATA[S.curso];
+  const rotObj = cd ? cd.rotaciones.find(r => r.nombre === S.rot) : null;
+  const docs = rotObj ? rotObj.docentes : [];
+
+  if (docs.length === 1) {
+    // Único docente → autocompleta y muestra como texto, sin selector
+    S.doc = docs[0];
+    badge(5, true);
+    const docWrap = document.getElementById("doc-wrap");
+    docWrap.innerHTML = `
+      <div style="
+        background: var(--surf2); border: 1px solid var(--grn);
+        border-radius: var(--r); padding: 9px 13px; font-size: .84rem;
+        color: var(--grn); display:flex; align-items:center; gap:8px;
+      ">
+        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        ${esc(S.doc)}
+      </div>`;
+  } else if (docs.length > 1) {
+    // Múltiples docentes → mostrar selector
+    S.doc = "";
+    badge(5, false);
+    const docWrap = document.getElementById("doc-wrap");
+    docWrap.innerHTML = `<select class="ss" id="s-doc" onchange="onDoc()">${
+      ['<option value="">— Seleccioná docente —</option>',
+       ...docs.map(d=>`<option>${d}</option>`)].join('')
+    }</select>`;
+  } else {
+    resetDocField(false);
+  }
+  checkViz();
+}
+
+function onDoc() {
+  const sel = document.getElementById("s-doc");
+  if (sel) { S.doc = sel.value; badge(5, !!S.doc); S.alumnos = []; }
+  checkViz();
+}
+
+function resetDocField(enabled) {
+  S.doc = "";
+  const docWrap = document.getElementById("doc-wrap");
+  if (!enabled) {
+    docWrap.innerHTML = `<select class="ss" id="s-doc" disabled><option>— Primero seleccioná rotación —</option></select>`;
+  }
+}
+
+function checkViz() {
+  const ok = !!(S.curso && S.hor && S.esp && S.rot && S.doc);
+  document.getElementById("btn-viz").disabled = !ok;
+  document.getElementById("btn-alum").disabled = !ok;
+}
+
+/* ── HELPER: obtener alumnos para el curso+rotación actual ── */
+function getAlumnosCursoRot() {
+  // Siempre devuelve TODOS los alumnos del curso, sin filtrar por rotación
+  const lista = ALUMNOS_POR_CURSO[S.curso];
+  if (!lista) return [];
+  return Array.isArray(lista) ? lista : [];
+}
+
+/* ── VISUALIZAR ── */
+function visualizar() {
+  const lista = getAlumnosCursoRot();
+  S.alumnos = lista.map((n, i) => ({ id: i, nombre: n }));
+
+  const key = skey();
+  try { const r = localStorage.getItem(key); S.activities = r ? JSON.parse(r) : []; }
+  catch(e) { S.activities = []; }
+
+  document.getElementById("acts-title").textContent = `${S.curso} — ${S.esp}`;
+  document.getElementById("acts-chips").innerHTML = `
+    <span class="chip">🕒 <strong>${S.hor}</strong></span>
+    <span class="chip">🔄 <strong>${S.rot}</strong></span>
+    <span class="chip">👤 <strong>${S.doc}</strong></span>
+  `;
+  closeSidebarMobile();
+  show("sc-acts");
+  renderActs();
+  toast(`${S.alumnos.length} alumnos · ${S.activities.length} actividad${S.activities.length!==1?"es":""}`, "ok");
+}
+
+/* ── RENDER ACTIVITIES ── */
+function renderActs() {
+  const tbody = document.getElementById("acts-tbody");
+  const empty = document.getElementById("acts-empty");
+  const tbl   = document.getElementById("acts-tbl");
+
+  if (!S.activities.length) { empty.style.display="block"; tbl.style.display="none"; return; }
+  empty.style.display = "none"; tbl.style.display = "table";
+
+  tbody.innerHTML = "";
+  S.activities.forEach(act => {
+    const regs   = act.registros || {};
+    const filled = Object.values(regs).filter(r=>r.nota!==""&&r.nota!==undefined || r.asistencia).length;
+    const pct    = S.alumnos.length ? Math.round(filled/S.alumnos.length*100) : 0;
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>
+        <div class="a-name-cell">
+          <div class="a-icon">${act.icon||"📋"}</div>
+          <span class="a-name">${esc(act.nombre)}</span>
+        </div>
+      </td>
+      <td style="color:var(--mut);white-space:nowrap">${fmtD(act.fecha)}</td>
+      <td style="color:var(--mut);font-size:.8rem;max-width:180px">${esc(act.obs)||"—"}</td>
+      <td>
+        <div class="prog-wrap">
+          <div class="prog-bg"><div class="prog-fill" style="width:${pct}%"></div></div>
+          <span class="prog-lbl">${filled}/${S.alumnos.length}</span>
+        </div>
+      </td>
+      <td>
+        <div class="btn-row">
+          <button class="btn-open" onclick="openAct('${act.id}')">
+            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            Abrir
+          </button>
+          <button class="btn-icon del" title="Eliminar" onclick="delAct('${act.id}')">
+            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+          </button>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function delAct(id) {
+  if (!confirm("¿Eliminar esta actividad y todos sus registros?")) return;
+  S.activities = S.activities.filter(a=>a.id!==id);
+  save(); renderActs(); toast("Actividad eliminada","inf");
+}
+
+/* ── OPEN ACTIVITY ── */
+function openAct(id) {
+  S.openId = id;
+  const act = S.activities.find(a=>a.id===id);
+  if (!act) return;
+  document.getElementById("d-icon").textContent = act.icon||"📋";
+  document.getElementById("d-name").textContent = act.nombre;
+  document.getElementById("d-fecha").textContent = fmtD(act.fecha);
+  document.getElementById("d-obs-span").innerHTML = act.obs ? `💬 ${esc(act.obs)}` : "";
+  document.getElementById("det-q").value = "";
+  show("sc-det");
+  renderDet();
+}
+function goBack() { show("sc-acts"); renderActs(); }
+
+/* ── RENDER DETAIL ── */
+function renderDet() {
+  const act  = S.activities.find(a=>a.id===S.openId);
+  if (!act) return;
+  const regs = act.registros||{};
+  const q    = document.getElementById("det-q").value.toLowerCase();
+  const list = q ? S.alumnos.filter(a=>a.nombre.toLowerCase().includes(q)) : S.alumnos;
+
+  document.getElementById("det-ct").textContent = `${list.length} de ${S.alumnos.length} alumnos`;
+
+  const vals  = Object.values(regs);
+  const notas = vals.filter(r=>r.nota!==""&&r.nota!==undefined);
+  const avg   = notas.length ? (notas.reduce((s,r)=>s+parseFloat(r.nota),0)/notas.length).toFixed(1) : "—";
+  const pres  = vals.filter(r=>r.asistencia==="P").length;
+  const aus   = vals.filter(r=>r.asistencia==="A").length;
+  const tard  = vals.filter(r=>r.asistencia==="T").length;
+
+  document.getElementById("d-stats").innerHTML = `
+    <div class="sm"><div class="sm-val" style="color:var(--grn)">${pres}</div><div class="sm-lbl">Presentes</div></div>
+    <div class="sm"><div class="sm-val" style="color:var(--red)">${aus}</div><div class="sm-lbl">Ausentes</div></div>
+    <div class="sm"><div class="sm-val" style="color:var(--acc2)">${tard}</div><div class="sm-lbl">Tardanza</div></div>
+    <div class="sm"><div class="sm-val" style="color:var(--acc)">${avg}</div><div class="sm-lbl">Promedio</div></div>
+  `;
+
+  const tbody = document.getElementById("det-tbody");
+  tbody.innerHTML = "";
+
+  list.forEach((al, idx) => {
+    const r = regs[al.id]||{nota:"",asistencia:"",obs:""};
+    const init = al.nombre.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+    const col  = COLORS[al.id % COLORS.length];
+    const n    = r.nota!==undefined ? r.nota : "";
+    const nn   = parseFloat(n);
+    const gc   = n===""? "" : nn>=7?"h": nn>=4?"m":"l";
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td style="color:var(--mut);font-size:.78rem">${idx+1}</td>
+      <td><div class="s-name-cell"><div class="av" style="background:${col}22;color:${col}">${init}</div>${esc(al.nombre)}</div></td>
+      <td>
+        <div class="nota-disp ${gc}" id="nd-${al.id}" onclick="focusN(${al.id})">${n!==""?n:"—"}</div>
+        <div class="nota-inp-wrap" id="niw-${al.id}">
+          <input type="number" id="ni-${al.id}" value="${n}" min="1" max="10" step="0.5"
+            onblur="blurN(${al.id})" onkeydown="if(event.key==='Enter')blurN(${al.id})" placeholder="1-10"/>
+        </div>
+      </td>
+      <td>
+        <div class="att-sel">
+          <button class="att-b ${r.asistencia==='P'?'sp':''}" id="ab-P-${al.id}" onclick="setAtt(${al.id},'P')">P</button>
+          <button class="att-b ${r.asistencia==='A'?'sa':''}" id="ab-A-${al.id}" onclick="setAtt(${al.id},'A')">A</button>
+          <button class="att-b ${r.asistencia==='T'?'st':''}" id="ab-T-${al.id}" onclick="setAtt(${al.id},'T')">T</button>
+        </div>
+      </td>
+      <td><input class="obs-inp" id="ob-${al.id}" type="text" value="${esc(r.obs||'')}" placeholder="Observaciones…" onchange="setObs(${al.id},this.value)"/></td>
+      <td><button class="btn-save-row" onclick="saveRow(${al.id})">Guardar</button></td>
+    `;
+    tbody.appendChild(tr);
+
+  });
+}
+
+/* ── INLINE NOTA ── */
+function focusN(aid) {
+  document.getElementById("nd-"+aid).style.display = "none";
+  const w = document.getElementById("niw-"+aid);
+  w.style.display = "flex";
+  const i = document.getElementById("ni-"+aid);
+  i.focus(); i.select();
+}
+function blurN(aid) {
+  const inp = document.getElementById("ni-"+aid);
+  const v   = inp.value.trim();
+  if (v !== "" && (parseFloat(v)<1||parseFloat(v)>10)) { toast("Nota entre 1 y 10","err"); inp.focus(); return; }
+  const act = S.activities.find(a=>a.id===S.openId);
+  if (!act.registros) act.registros = {};
+  if (!act.registros[aid]) act.registros[aid] = {nota:"",asistencia:"",obs:""};
+  act.registros[aid].nota = v==="" ? "" : parseFloat(v);
+
+  document.getElementById("niw-"+aid).style.display = "none";
+  const nd = document.getElementById("nd-"+aid);
+  nd.style.display = "";
+  const n  = act.registros[aid].nota;
+  const gc = n===""?"": n>=7?"h": n>=4?"m":"l";
+  nd.className = `nota-disp ${gc}`;
+  nd.textContent = n!==""?n:"—";
+}
+
+/* ── INLINE ASISTENCIA ── */
+function setAtt(aid, v) {
+  const act = S.activities.find(a=>a.id===S.openId);
+  if (!act.registros) act.registros = {};
+  if (!act.registros[aid]) act.registros[aid] = {nota:"",asistencia:"",obs:""};
+  const cur = act.registros[aid].asistencia;
+  act.registros[aid].asistencia = cur===v ? "" : v;
+  const map = {P:"sp",A:"sa",T:"st"};
+  ["P","A","T"].forEach(k => {
+    const b = document.getElementById(`ab-${k}-${aid}`);
+    if (b) b.className = "att-b " + (act.registros[aid].asistencia===k ? map[k] : "");
+  });
+}
+
+/* ── INLINE OBS ── */
+function setObs(aid, val) {
+  const act = S.activities.find(a=>a.id===S.openId);
+  if (!act.registros) act.registros = {};
+  if (!act.registros[aid]) act.registros[aid] = {nota:"",asistencia:"",obs:""};
+  act.registros[aid].obs = val;
+}
+
+/* ── SAVE ROW ── */
+function saveRow(aid) {
+  const obsEl = document.getElementById("ob-"+aid);
+  if (obsEl) setObs(aid, obsEl.value);
+  save();
+  renderDet();
+  toast("Guardado ✓","ok");
+}
+
+/* ── MODAL NUEVA ACTIVIDAD ── */
+function openNewAct() {
+  document.getElementById("m-nom").value = "";
+  document.getElementById("m-fec").valueAsDate = new Date();
+  document.getElementById("m-obs").value = "";
+  document.getElementById("ov-act").classList.add("open");
+  setTimeout(()=>document.getElementById("m-nom").focus(), 80);
+}
+function closeAct(e) {
+  if (e && e.target !== document.getElementById("ov-act")) return;
+  document.getElementById("ov-act").classList.remove("open");
+}
+function createAct() {
+  const nom = document.getElementById("m-nom").value.trim();
+  const fec = document.getElementById("m-fec").value;
+  const obs = document.getElementById("m-obs").value.trim();
+  const ico = document.getElementById("m-ico").value;
+  if (!nom) { toast("Ingresá un nombre","err"); return; }
+  if (!fec) { toast("Seleccioná una fecha","err"); return; }
+  S.activities.push({ id: Date.now().toString(36), nombre:nom, fecha:fec, icon:ico, obs, registros:{} });
+  save();
+  renderActs();
+  closeAct();
+  toast(`Actividad "${nom}" creada`,"ok");
+}
+
+/* ── HELPERS ── */
+const SCREEN_HISTORY = [];
+const SCREEN_BACK_ACTIONS = {
+  "sc-welcome":  null,
+  "sc-acts":     () => show("sc-welcome"),
+  "sc-det":      () => { show("sc-acts"); renderActs(); },
+  "sc-alumnos":  () => show("sc-welcome"),
+  "sc-alumno":   () => { show("sc-alumnos"); renderAlumnos(); },
+};
+
+function show(id) {
+  // Track history
+  const current = ["sc-welcome","sc-acts","sc-det","sc-alumnos","sc-alumno"].find(s =>
+    document.getElementById(s).style.display !== "none"
+  );
+  if (current && current !== id) SCREEN_HISTORY.push(current);
+  if (SCREEN_HISTORY.length > 20) SCREEN_HISTORY.shift();
+
+  ["sc-welcome","sc-acts","sc-det","sc-alumnos","sc-alumno"].forEach(s => {
+    const el = document.getElementById(s);
+    const isTarget = s === id;
+    el.style.display = isTarget ? (s==="sc-welcome"?"flex":"block") : "none";
+    if (isTarget) { el.style.animation="none"; void el.offsetWidth; el.style.animation="fadeUp .35s ease forwards"; }
+  });
+
+  // Show/hide global back button
+  const btn = document.getElementById("btn-global-back");
+  if (btn) btn.style.display = (id !== "sc-welcome") ? "flex" : "none";
+}
+
+function goBackGlobal() {
+  const current = ["sc-welcome","sc-acts","sc-det","sc-alumnos","sc-alumno"].find(s =>
+    document.getElementById(s).style.display !== "none"
+  );
+  const action = SCREEN_BACK_ACTIONS[current];
+  if (action) action();
+  else show("sc-welcome");
+}
+
+function computeStudentStats(alumnoId) {
+  let notas = [], pres = 0, aus = 0, tard = 0, total = 0;
+  S.activities.forEach(act => {
+    const r = (act.registros||{})[alumnoId];
+    if (!r) return;
+    total++;
+    if (r.nota !== "" && r.nota !== undefined) notas.push(parseFloat(r.nota));
+    if (r.asistencia === "P") pres++;
+    else if (r.asistencia === "A") aus++;
+    else if (r.asistencia === "T") tard++;
+  });
+  const avg = notas.length ? (notas.reduce((a,b)=>a+b,0)/notas.length).toFixed(1) : null;
+  const attTotal = pres + aus + tard;
+  const attPct = attTotal ? Math.round(pres/attTotal*100) : null;
+  return { avg, notas, pres, aus, tard, total, attPct };
+}
+
+/* ── VER ALUMNOS ── */
+let alumSort = "nombre";
+
+function verAlumnos() {
+  const key = skey();
+  try { const r = localStorage.getItem(key); S.activities = r ? JSON.parse(r) : []; } catch(e) { S.activities = []; }
+  // Siempre recargar frescos según curso+rotación actual
+  S.alumnos = getAlumnosCursoRot().map((n, i) => ({ id: i, nombre: n }));
+
+  document.getElementById("alum-title").textContent = `${S.curso} — Alumnos`;
+  document.getElementById("alum-chips").innerHTML = `
+    <span class="chip">🕒 <strong>${S.hor}</strong></span>
+    <span class="chip">🔄 <strong>${S.rot}</strong></span>
+    <span class="chip">👤 <strong>${S.doc}</strong></span>
+    <span class="chip">📋 <strong>${S.activities.length} actividades</strong></span>
+  `;
+  document.getElementById("alum-q").value = "";
+  alumSort = "nombre";
+  document.querySelectorAll(".sort-tab").forEach((t,i)=>t.classList.toggle("active",i===0));
+
+  loadRotacionesAlumnos();
+  closeSidebarMobile();
+  show("sc-alumnos");
+  renderAlumnos();
+}
+
+function setSortAlum(type, btn) {
+  alumSort = type;
+  document.querySelectorAll(".sort-tab").forEach(t=>t.classList.remove("active"));
+  btn.classList.add("active");
+  renderAlumnos();
+}
+
+function renderAlumnos() {
+  const q = document.getElementById("alum-q").value.toLowerCase();
+  let list = q ? S.alumnos.filter(a=>a.nombre.toLowerCase().includes(q)) : [...S.alumnos];
+
+  list.sort((a,b) => {
+    if (alumSort === "nombre") return a.nombre.localeCompare(b.nombre);
+    const sa = computeStudentStats(a.id);
+    const sb = computeStudentStats(b.id);
+    if (alumSort === "promedio")    return (parseFloat(sb.avg)||0) - (parseFloat(sa.avg)||0);
+    if (alumSort === "asistencia")  return (sb.attPct||0) - (sa.attPct||0);
+    if (alumSort === "actividades") return sb.total - sa.total;
+    return 0;
+  });
+
+  document.getElementById("alum-ct").textContent = `${list.length} de ${S.alumnos.length} alumnos`;
+  const tbody = document.getElementById("stu-tbody");
+  tbody.innerHTML = "";
+
+  list.forEach((al, idx) => {
+    const st   = computeStudentStats(al.id);
+    const col  = COLORS[al.id % COLORS.length];
+    const init = al.nombre.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+    const avgColor = !st.avg ? "var(--mut)" : parseFloat(st.avg)>=7?"var(--grn)":parseFloat(st.avg)>=4?"var(--acc2)":"var(--red)";
+    const attColor = st.attPct===null ? "var(--mut)" : st.attPct>=80?"var(--grn)":st.attPct>=60?"var(--acc2)":"var(--red)";
+
+    const dots = S.activities.map(act => {
+      const r = (act.registros||{})[al.id];
+      let c = "var(--surf3)";
+      if (r) {
+        if (r.nota !== "" && r.nota !== undefined) {
+          const n = parseFloat(r.nota);
+          c = n>=7 ? "var(--grn)" : n>=4 ? "var(--acc2)" : "var(--red)";
+        } else if (r.asistencia==="P") c = "var(--grn)";
+        else if (r.asistencia==="A")  c = "var(--red)";
+        else if (r.asistencia==="T")  c = "var(--acc2)";
+      }
+      return `<div class="s-dot" style="background:${c}" title="${esc(act.nombre)}"></div>`;
+    }).join("");
+
+    const tr = document.createElement("tr");
+    // Get saved rotation for this student (stored per-student in localStorage)
+    const storedRot = (S.rotacionesAlumnos && S.rotacionesAlumnos[al.id]) || "";
+    const rotOpts = (CURSOS_DATA[S.curso]?.rotaciones || [])
+      .map(r2 => `<option value="${r2.nombre}"${storedRot===r2.nombre?' selected':''}>${r2.nombre}</option>`)
+      .join('');
+
+    tr.onclick = (e) => { if (e.target.tagName !== 'SELECT' && e.target.tagName !== 'OPTION') openAlumno(al.id); };
+    tr.innerHTML = `
+      <td style="color:var(--mut);font-size:.78rem;width:32px">${idx+1}</td>
+      <td><div class="stu-name-cell"><div class="stu-av-sm" style="background:${col}22;color:${col}">${init}</div>${esc(al.nombre)}</div></td>
+      <td onclick="event.stopPropagation()">
+        <select onchange="setAlumnoRot(${al.id}, this.value)" style="background:var(--surf2);border:1px solid var(--bord);border-radius:6px;color:var(--text);padding:5px 8px;font-size:.78rem;cursor:pointer;max-width:160px;">
+          <option value="">— sin rotación —</option>
+          ${rotOpts}
+        </select>
+      </td>
+      <td><span style="font-family:var(--fh);font-weight:800;font-size:.92rem;color:${avgColor}">${st.avg||"—"}</span></td>
+      <td><span style="font-family:var(--fh);font-weight:700;font-size:.88rem;color:${attColor}">${st.attPct!==null?st.attPct+"%":"—"}</span></td>
+      <td style="color:var(--grn);font-weight:600">${st.pres||"—"}</td>
+      <td style="color:var(--red);font-weight:600">${st.aus||"—"}</td>
+      <td style="color:var(--acc2);font-weight:600">${st.tard||"—"}</td>
+      <td><div class="dots-strip">${dots||`<span style="color:var(--mut);font-size:.75rem">sin actividades</span>`}</div></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+/* ── STUDENT PROFILE ── */
+let openAlumnoId = null;
+
+function openAlumno(aid) {
+  openAlumnoId = aid;
+  const al  = S.alumnos.find(a=>a.id===aid);
+  if (!al) return;
+  const st  = computeStudentStats(aid);
+  const col = COLORS[aid % COLORS.length];
+  const init = al.nombre.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+
+  const avEl = document.getElementById("sp-av");
+  avEl.textContent = init;
+  avEl.style.background = col + "22";
+  avEl.style.color = col;
+
+  document.getElementById("sp-name").textContent = al.nombre;
+  document.getElementById("sp-meta").textContent = `${S.curso} · ${S.esp} · ${S.rot} · ${S.doc}`;
+
+  const avgColor = !st.avg ? "var(--mut)" : parseFloat(st.avg)>=7?"var(--grn)":parseFloat(st.avg)>=4?"var(--acc2)":"var(--red)";
+  const attColor = st.attPct===null ? "var(--mut)" : st.attPct>=80?"var(--grn)":st.attPct>=60?"var(--acc2)":"var(--red)";
+  document.getElementById("sp-stats").innerHTML = `
+    <div class="sm"><div class="sm-val" style="color:${avgColor}">${st.avg||"—"}</div><div class="sm-lbl">Promedio</div></div>
+    <div class="sm"><div class="sm-val" style="color:${attColor}">${st.attPct!==null?st.attPct+"%":"—"}</div><div class="sm-lbl">Asistencia</div></div>
+    <div class="sm"><div class="sm-val" style="color:var(--grn)">${st.pres}</div><div class="sm-lbl">Presencias</div></div>
+    <div class="sm"><div class="sm-val" style="color:var(--red)">${st.aus}</div><div class="sm-lbl">Ausencias</div></div>
+    <div class="sm"><div class="sm-val" style="color:var(--acc2)">${st.tard}</div><div class="sm-lbl">Tardanzas</div></div>
+  `;
+
+  show("sc-alumno");
+  renderAlumno();
+}
+
+function goBackAlumnos() { show("sc-alumnos"); renderAlumnos(); }
+
+function renderAlumno() {
+  const aid = openAlumnoId;
+  const actsOrdered = [...S.activities].sort((a,b)=> a.fecha < b.fecha ? -1 : 1);
+
+  const tlEl = document.getElementById("sp-timeline");
+  if (!actsOrdered.length) {
+    tlEl.style.display = "none";
+  } else {
+    tlEl.style.display = "flex";
+    tlEl.innerHTML = actsOrdered.map(act => {
+      const r = (act.registros||{})[aid];
+      let dotStyle = "background:var(--surf3);border-color:var(--bord)";
+      let label = "—";
+      if (r && r.nota !== "" && r.nota !== undefined) {
+        const n = parseFloat(r.nota);
+        label = String(n);
+        if (n>=7) dotStyle = "background:rgba(62,207,142,.2);border-color:var(--grn);color:var(--grn)";
+        else if (n>=4) dotStyle = "background:rgba(247,193,79,.15);border-color:var(--acc2);color:var(--acc2)";
+        else dotStyle = "background:rgba(247,111,111,.15);border-color:var(--red);color:var(--red)";
+      } else if (r && r.asistencia === "A") {
+        dotStyle = "background:rgba(247,111,111,.15);border-color:var(--red);color:var(--red)"; label = "A";
+      } else if (r && r.asistencia === "T") {
+        dotStyle = "background:rgba(247,193,79,.15);border-color:var(--acc2);color:var(--acc2)"; label = "T";
+      } else if (r && r.asistencia === "P") {
+        dotStyle = "background:rgba(62,207,142,.15);border-color:var(--grn);color:var(--grn)"; label = "P";
+      }
+      return `<div class="gt-dot" title="${esc(act.nombre)} — ${fmtD(act.fecha)}">
+        <div class="gt-dot-circle" style="${dotStyle}">${label}</div>
+        <div class="gt-dot-lbl">${esc(act.nombre)}</div>
+      </div>`;
+    }).join(`<div style="flex:1;height:1px;background:var(--bord);margin:0 2px;margin-bottom:18px"></div>`);
+  }
+
+  const hasAny = actsOrdered.some(act => {
+    const r = (act.registros||{})[aid];
+    return r && (r.nota!==""&&r.nota!==undefined || r.asistencia || r.obs);
+  });
+
+  document.getElementById("sp-empty").style.display = hasAny ? "none" : "block";
+  document.getElementById("sp-tbl").style.display   = hasAny ? "table" : "none";
+
+  const tbody = document.getElementById("sp-tbody");
+  tbody.innerHTML = "";
+
+  actsOrdered.forEach(act => {
+    const r = (act.registros||{})[aid] || {nota:"",asistencia:"",obs:""};
+    const n   = r.nota !== undefined ? r.nota : "";
+    const nn  = parseFloat(n);
+    const gc  = n===""?"":nn>=7?"h":nn>=4?"m":"l";
+    const attMap = {P:["p","Presente"],A:["a","Ausente"],T:["t","Tardanza"],"":["n","—"]};
+    const [ac,at] = attMap[r.asistencia||""];
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><div class="a-name-cell"><div class="a-icon" style="width:28px;height:28px;font-size:.78rem">${act.icon||"📋"}</div><span style="font-weight:600">${esc(act.nombre)}</span></div></td>
+      <td style="color:var(--mut);white-space:nowrap;font-size:.8rem">${fmtD(act.fecha)}</td>
+      <td><span class="nota-disp ${gc}" style="cursor:default">${n!==""?n:"—"}</span></td>
+      <td><span class="att-badge ${ac}">${at}</span></td>
+      <td style="color:var(--mut);font-size:.8rem">${esc(r.obs)||"—"}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function skey() { return `gd3|${S.curso}|${S.hor}|${S.esp}|${S.rot}|${S.doc}`; }
+function save() {
+  try { localStorage.setItem(skey(), JSON.stringify(S.activities)); } catch(e){}
+  if (!window.DEMO_MODE && window._fb) {
+    const { db, doc, setDoc } = window._fb;
+    const id = skey().replace(/[|°\s]/g,"_");
+    setDoc(doc(db,"registros",id),{activities:S.activities,ts:new Date().toISOString()}).catch(()=>{});
+  }
+}
+function fmtD(d) {
+  if (!d) return "—";
+  const [y,m,day] = d.split("-"); return `${day}/${m}/${y}`;
+}
+function esc(s) {
+  if (!s) return "";
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+/* ── ROTACIÓN POR ALUMNO ── */
+function setAlumnoRot(aid, valor) {
+  if (!S.rotacionesAlumnos) S.rotacionesAlumnos = {};
+  S.rotacionesAlumnos[aid] = valor;
+  // Persist per course+context key
+  try {
+    localStorage.setItem("rots|" + skey(), JSON.stringify(S.rotacionesAlumnos));
+  } catch(e) {}
+}
+
+function loadRotacionesAlumnos() {
+  try {
+    const saved = localStorage.getItem("rots|" + skey());
+    S.rotacionesAlumnos = saved ? JSON.parse(saved) : {};
+  } catch(e) { S.rotacionesAlumnos = {}; }
+}
+
+/* ── EDITAR ALUMNOS DEL CURSO ── */
+function openEditAlumnos() {
+  const lista = ALUMNOS_POR_CURSO[S.curso] || [];
+  const ta = document.getElementById("alumnos-editor");
+  ta.value = lista.join("\n");
+  document.getElementById("ov-alumnos-title").textContent = `Editar alumnos — ${S.curso}`;
+  updateAlumnosCount();
+  ta.addEventListener("input", updateAlumnosCount);
+  document.getElementById("ov-alumnos").classList.add("open");
+  setTimeout(() => ta.focus(), 80);
+}
+
+function updateAlumnosCount() {
+  const lines = document.getElementById("alumnos-editor").value
+    .split("\n").map(l => l.trim()).filter(l => l.length > 0);
+  document.getElementById("alumnos-count").textContent = `${lines.length} alumno${lines.length !== 1 ? "s" : ""}`;
+}
+
+function closeEditAlumnos(e) {
+  if (e && e.target !== document.getElementById("ov-alumnos")) return;
+  document.getElementById("ov-alumnos").classList.remove("open");
+}
+
+function saveEditAlumnos() {
+  const lines = document.getElementById("alumnos-editor").value
+    .split("\n").map(l => l.trim()).filter(l => l.length > 0);
+  if (lines.length === 0) { toast("La lista no puede estar vacía", "err"); return; }
+
+  // Update in-memory list
+  ALUMNOS_POR_CURSO[S.curso] = lines;
+
+  // Reload S.alumnos immediately
+  S.alumnos = lines.map((n, i) => ({ id: i, nombre: n }));
+
+  // Persist to localStorage so survives reload
+  try {
+    const storageKey = "alumnos|" + S.curso;
+    localStorage.setItem(storageKey, JSON.stringify(lines));
+  } catch(e) {}
+
+  closeEditAlumnos();
+  renderAlumnos();
+  toast(`Lista actualizada — ${lines.length} alumnos`, "ok");
+}
+
+// On app start, restore any edited student lists from localStorage
+function restoreAlumnosFromStorage() {
+  Object.keys(ALUMNOS_POR_CURSO).forEach(curso => {
+    try {
+      const saved = localStorage.getItem("alumnos|" + curso);
+      if (saved) ALUMNOS_POR_CURSO[curso] = JSON.parse(saved);
+    } catch(e) {}
+  });
+}
+
+function toast(msg, type="inf") {
+  const icons={ok:"✅",err:"❌",inf:"ℹ️"};
+  const t = document.createElement("div");
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span>${icons[type]}</span><span>${msg}</span>`;
+  document.getElementById("toasts").appendChild(t);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add("show")));
+  setTimeout(()=>{ t.classList.remove("show"); setTimeout(()=>t.remove(),300); }, 2800);
+}
+</script>
+</body>
+</html>
